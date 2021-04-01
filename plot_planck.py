@@ -19,7 +19,7 @@ import healpy as hp
 # # # # # Functions # # # # #
 #------------------------------------------------------------------#
 
-planck_path = '/n17data/PLANCK/'
+planck_path = '/n17data/jimenez/PLANCK/'
 planck_217 = hp.read_map(planck_path + "HFI_SkyMap_217-field-IQU_2048_R3.00_full.fits")
 hp.mollview(
     planck_217,
