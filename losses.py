@@ -243,14 +243,14 @@ def cosine_tversky_loss(gamma=1):
 # Focal Tversky loss
 def focal_tversky_loss(gamma=0.75):
     def loss_function(y_true, y_pred):
-    	"""
-    	Paper: A Novel Focal Tversky loss function with improved Attention U-Net for lesion segmentation
-    	Link: https://arxiv.org/abs/1810.07842
-    	:param gamma: focal parameter controls degree of down-weighting of easy examples
+        """
+        Paper: A Novel Focal Tversky loss function with improved Attention U-Net for lesion segmentation
+        Link: https://arxiv.org/abs/1810.07842
+        :param gamma: focal parameter controls degree of down-weighting of easy examples
         
         delta: controls weight given to false positive and false negatives. 
         this equates to the Focal Tversky loss when delta = 0.7
-		smooth: smooithing constant to prevent division by 0 errors
+        smooth: smooithing constant to prevent division by 0 errors
         """
         delta=0.9
         smooth=0.000001
@@ -265,7 +265,7 @@ def focal_tversky_loss(gamma=0.75):
         tversky_class = (tp + smooth)/(tp + delta*fn + (1-delta)*fp + smooth)
         # Sum up classes to one score
         focal_tversky_loss = K.sum(K.pow((1-tversky_class), gamma), axis=[-1])
-    	# adjusts loss to account for number of classes
+        # adjusts loss to account for number of classes
         num_classes = K.cast(K.shape(y_true)[-1],'float32')
         focal_tversky_loss = focal_tversky_loss / num_classes
         return focal_tversky_loss
@@ -275,9 +275,9 @@ def focal_tversky_loss(gamma=0.75):
 # (modified) Focal Dice loss
 def focal_dice_loss(delta=0.7, gamma_fd=0.75):
     def loss_function(y_true, y_pred):
-    	"""
+        """
         :param delta: controls weight given to false positive and false negatives. 
-        			  this equates to the Focal Tversky loss when delta = 0.7
+                        this equates to the Focal Tversky loss when delta = 0.7
         :param gamma_fd: focal parameter controls degree of down-weighting of easy examples
         
         smooth: smooithing constant to prevent division by 0 errors
@@ -294,7 +294,7 @@ def focal_dice_loss(delta=0.7, gamma_fd=0.75):
         dice_class = (tp + smooth)/(tp + delta*fn + (1-delta)*fp + smooth)
         # Sum up classes to one score
         focal_dice_loss = K.sum(K.pow((1-dice_class), gamma_fd), axis=[-1])
-    	# adjusts loss to account for number of classes
+        # adjusts loss to account for number of classes
         num_classes = K.cast(K.shape(y_true)[-1],'float32')
         focal_dice_loss = focal_dice_loss / num_classes
         return focal_dice_loss
@@ -305,10 +305,10 @@ def focal_dice_loss(delta=0.7, gamma_fd=0.75):
 # (modified) Focal loss
 def focal_loss(alpha=None, beta=None, gamma_f=2.):
     def loss_function(y_true, y_pred):
-    	"""
+        """
         :param alpha: controls weight given to each class
         :param beta: controls relative weight of false positives and false negatives. Beta > 0.5 penalises 
-                 false negatives more than false positives.
+                    false negatives more than false positives.
         :param gamma_f: focal parameter controls degree of down-weighting of easy examples. 
         """ 
         axis = identify_axis(y_true.get_shape())
@@ -339,19 +339,19 @@ def mixed_focal_loss(weight=None, alpha=None, beta=None, delta=0.7, gamma_f=2.,g
     :param weight: represents lambda parameter and controls weight given to Focal Tversky loss and Focal loss
     :param alpha: controls weight given to each class
     :param beta: controls relative weight of false positives and false negatives. Beta > 0.5 penalises 
-    			  false negatives more than false positives.
+                    false negatives more than false positives.
     :param gamma_f: modified Focal loss' focal parameter controls degree of down-weighting of easy examples
     :param gamma_fd: modified Focal Dice loss' focal parameter controls degree of down-weighting of easy examples
     """
     def loss_function(y_true,y_pred):
-      # Obtain Focal Dice loss
-      focal_dice = focal_dice_loss(delta=delta, gamma_fd=gamma_fd)(y_true,y_pred)
-      # Obtain Focal loss
-      focal = focal_loss(alpha=alpha, beta=beta, gamma_f=gamma_f)(y_true,y_pred)
-      # return weighted sum of Focal loss and Focal Dice loss
-      if weight is not None:
-        return (weight * focal_dice) + ((1-weight) * focal)  
-      else:
-        return focal_dice + focal
+        # Obtain Focal Dice loss
+        focal_dice = focal_dice_loss(delta=delta, gamma_fd=gamma_fd)(y_true,y_pred)
+        # Obtain Focal loss
+        focal = focal_loss(alpha=alpha, beta=beta, gamma_f=gamma_f)(y_true,y_pred)
+        # return weighted sum of Focal loss and Focal Dice loss
+        if weight is not None:
+            return (weight * focal_dice) + ((1-weight) * focal)  
+        else:
+            return focal_dice + focal
 
     return loss_function
