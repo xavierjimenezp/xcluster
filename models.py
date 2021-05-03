@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: Xavier Jimenez
+Functions from https://github.com/nabsabraham/focal-tversky-unet
 """
 
 import tensorflow as tf 
