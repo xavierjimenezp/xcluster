@@ -45,10 +45,10 @@ Modify the `params.py` file to specify paths to *planck* HFI full sky maps and M
 
 
 The following commands take *planck* 6 frenquency maps and preprocess them. 
-Sky maps are splited with HEALPIX $n_{\mathrm{side}}=2$ into $48$ tiles of equal-sized area of $860$ square degrees each. Tiles $10$, $39$, $42$ and $26$ are used for validation and tile $7$ is kept for test. Remaining patches are left for training.
+Sky maps are splited with HEALPIX nside=2 into 48 tiles of equal-sized area of 860 square degrees each. Tiles 10, 39, 42 and 26 are used for validation and tile 7 is kept for test. Remaining patches are left for training.
 
-**Training**: Individual patches with size $1.83º \times 1.83º\; (64\times64\; \mathrm{pixels})$, and resolution $\theta_{\mathrm{pix}}=1.7º$, are extracted from the sky maps. These patches contain at least one cluster from the cluster catalog selected in the params file under *dataset*. Multiple patches of the same cluster are extracted with random translations to get and input training set with shape $(\sim 90,000\times64\times64\times6)$. For each patch, a segmentation image is created where, for each cluster, a circular mask with radius *disk_radius* is created. The output training set input is $(\sim 90,000\times64\times64\times1)$.
-**Validation**: Same as training. input shape $(\sim 10,000\times64\times64\times6)$.
+**Training**: Individual patches with size 1.83º x 1.83º  (64 x 64 pixels), and resolution 1.7º, are extracted from the sky maps. These patches contain at least one cluster from the cluster catalog selected in the params file under *dataset*. Multiple patches of the same cluster are extracted with random translations to get and input training set with shape (~ 90,000 x 64 x 64 x 6). For each patch, a segmentation image is created where, for each cluster, a circular mask with radius *disk_radius* is created. The output training set input is (~ 90,000 x 64 x 64 x 1).
+**Validation**: Same as training. input shape(~ 10,000 x 64 x 64 x 6).
 **Test**: Tile number 7 is entirely splitted into patches to cover the whole HEALPIX. Some patches do not contain any cluster. Segmentation images are created the same way as training and validation.
 
 `python xcluster.py --make_directories True`
