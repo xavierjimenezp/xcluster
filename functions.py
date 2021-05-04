@@ -17,7 +17,6 @@ import shutil
 import time
 import glob
 from joblib import Parallel, delayed
-import argparse
 from scipy import ndimage
 import losses
 import models
@@ -992,47 +991,6 @@ class CNNSegmentation(object):
         self.model = model_dict[model]
         self.model_name = model
 
-    def conv_block(self, x, num_filters):
-        x = Conv2D(num_filters, (3, 3), padding="same")(x)
-        x = BatchNormalization()(x)
-        x = Activation("relu")(x)
-
-        x = Conv2D(num_filters, (3, 3), padding="same")(x)
-        x = BatchNormalization()(x)
-        x = Activation("relu")(x)
-
-        return x
-
-    def build_unet(self):
-        num_filters = [16, 32, 48, 64]
-        inputs = Input((self.size, self.size, len(self.bands)))
-
-        skip_x = []
-        x = inputs
-        ## Encoder
-        for f in num_filters:
-            x = self.conv_block(x, f)
-            skip_x.append(x)
-            x = MaxPool2D((2, 2))(x)
-
-        ## Bridge
-        x = self.conv_block(x, num_filters[-1])
-
-        num_filters.reverse()
-        skip_x.reverse()
-        ## Decoder
-        for i, f in enumerate(num_filters):
-            x = UpSampling2D((2, 2))(x)
-            xs = skip_x[i]
-            x = Concatenate()([x, xs])
-            x = self.conv_block(x, f)
-
-        ## Output
-        x = Conv2D(1, (1, 1), padding="same")(x)
-        x = Activation("sigmoid")(x)
-
-        return Model(inputs, x)
-
     def npy_to_tfdata(self, batch_size=20, buffer_size=1000, input_train=None, input_val=None, input_test=None, output_train=None, output_val=None, output_test=None):
         if input_train is None:
             input_train = np.load(self.dataset_path + 'input_train_pre_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
@@ -1073,10 +1031,6 @@ class CNNSegmentation(object):
         ]
 
 
-        # model = self.build_unet()
-        # model.compile(loss=losses.focal_tversky, optimizer=opt, metrics=metrics)
-
-        
         input_size = (self.npix, self.npix, len(self.bands))
         model = self.model(self.optimizer, input_size, self.loss)
 
@@ -1443,7 +1397,9 @@ class CNNSegmentation(object):
 
         from tensorflow.keras.utils import CustomObjectScope
 
-        with CustomObjectScope({'iou': losses.iou, 'f1': losses.f1, 'focal_tversky': losses.focal_tversky_loss, 'dsc': losses.dsc, 'tversky_loss': losses.tversky_loss}):
+        with CustomObjectScope({'iou': losses.iou, 'f1': losses.f1, 'dsc': losses.dsc,'tversky_loss': losses.tversky_loss, 'focal_tversky_loss': losses.focal_tversky_loss, 
+                                'dice_loss': losses.dice_loss, 'combo_loss': losses.combo_loss, 'cosine_tversky_loss': losses.cosine_tversky_loss, 'focal_dice_loss': losses.focal_dice_loss, 
+                                'focal_loss': losses.focal_loss, 'mixed_focal_loss': losses.mixed_focal_loss}):
             model = tf.keras.models.load_model(self.path + "tf_saves/" + self.dataset + "/model_%s_l%s_o%s_f%s_"%(self.model_name, self.loss_name, self.optimizer_name, self.freq) + self.output_name + ".h5")
 
         if plot == True:

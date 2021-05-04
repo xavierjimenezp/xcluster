@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 """
 @author: Xavier Jimenez
+Main script
 """
 
 import argparse
 from functions import *
+from params import *
 
 #------------------------------------------------------------------#
 # # # # # Script # # # # #
