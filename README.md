@@ -6,7 +6,7 @@
 |----------------|-------------------------------|
 |alpha|04/05/2021            |
 
-![xCluster](https://github.com/xavierjimenezp/xcluster/mask.png)
+![enter image description here](https://github.com/xavierjimenezp/xcluster/blob/main/mask.png?raw=true)
 
 
 # Disclaimer
