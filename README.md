@@ -17,7 +17,8 @@ Clone or download the xCluster repository:
 
 `git clone https://github.com/xavierjimenezp/xcluster/`
 
-Create a new conda environment (not available yet):
+Create a new conda environment:
+> **Note**: This feature is not available yet, environment will be implemented later on.
 
 `conda env create -f environment_xcluster.yml`
 
