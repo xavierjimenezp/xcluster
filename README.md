@@ -29,7 +29,7 @@ Activate the environment:
 or 
 `conda activate xcluster`
 
-> **Note**: Eventually, planck HFI full sky maps and MILCA full sky map will be added as downloadable files (if public).
+> **Note**: Eventually, planck full sky maps will be added as downloadable files (if public).
 
 Code is ready to run !
 
