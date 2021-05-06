@@ -13,7 +13,7 @@ xCluster is currentlty under early development and may contain bugs or instabili
 
 # Overview
 
-xCluster is an algorithm that uses full sky-maps and cluster catalogs to train a U-Net-like convolutional neural network (CNN) for semantic segmentation in order to detect unkown clusters. It creates and preprocess the input/output datasets for the CNN. Then it trains the CNN and detects potential galaxy clusters in the test set. Finally, detections are cross-matched with known clusters and reliability is assessed by cross-matching with known IR sources.
+xCluster is an algorithm that uses full sky-maps and galaxy cluster catalogs to train a U-Net-like convolutional neural network (CNN) for semantic segmentation in order to detect unkown clusters. It creates and preprocess the input/output datasets for the CNN, trains it and detects potential galaxy clusters in the test set. Finally, detections are cross-matched with known clusters and reliability is assessed by cross-matching with known IR sources.
 
 ## Dataset creation & preprocessing
 
