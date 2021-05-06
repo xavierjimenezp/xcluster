@@ -202,4 +202,4 @@ Parameters that need to be specified when using  `--predict True`.
 
 # LICENSE
 
-MIT License
+[MIT License](https://github.com/xavierjimenezp/xcluster/blob/main/LICENSE)
