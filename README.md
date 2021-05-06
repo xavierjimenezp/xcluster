@@ -149,48 +149,48 @@ List of parameters that need to be specified in the parameters input file. By de
 ### PATHS
 Paths that need to be specified for all xcluster steps. 
 
-`planck_path` `(mandatory, str)`:  path to planck HFI full sky maps. Check **Quickstart** section for file names.
-`milca_path` `(mandatory, str)`: path to MILCA full sky map. Check **Quickstart** section for file name.
+- `planck_path` `(mandatory, str)`:  path to planck HFI full sky maps. Check **Quickstart** section for file names.
+- `milca_path` `(mandatory, str)`: path to MILCA full sky map. Check **Quickstart** section for file name.
 
 > **Note**: Eventually, more sky maps will be added and more parameters will be added.
 
 ### GLOBAL
 Parameters that need to be specified for all xcluster steps. 
 
-`dataset` `(mandatory, str)`: cluster catalog that will be used to extract patches from full sky-maps.  Options are: 'planck_z', 'planck_no-z', 'MCXC', 'RM30', 'RM50'. Check V. Bonjean 2018 for catalog definitions.
-`bands` `(mandatory, list of str)`: list of sky maps that will be used (e.g ['100GHz','143GHz','217GHz','353GHz','545GHz','857GHz', 'y-map'] contains all possible sky maps). 
-`merge_daily_output_directory` `(mandatory, bool)`: if True, will merge daily output directory with the most recent directory. if False, will create a new directory at output/*dataset*/dd-mm-yyy.
-`disk_radius`  `(mandatory, float)` = disk radius (in arcmin) used circular segmentation output files. If None, a distribution between 0 and 15 arcmin will be used instead.
+- `dataset` `(mandatory, str)`: cluster catalog that will be used to extract patches from full sky-maps.  Options are: 'planck_z', 'planck_no-z', 'MCXC', 'RM30', 'RM50'. Check V. Bonjean 2018 for catalog definitions.
+- `bands` `(mandatory, list of str)`: list of sky maps that will be used (e.g ['100GHz','143GHz','217GHz','353GHz','545GHz','857GHz', 'y-map'] contains all possible sky maps). 
+- `merge_daily_output_directory` `(mandatory, bool)`: if True, will merge daily output directory with the most recent directory. if False, will create a new directory at output/*dataset*/dd-mm-yyy.
+- `disk_radius`  `(mandatory, float)` = disk radius (in arcmin) used circular segmentation output files. If None, a distribution between 0 and 15 arcmin will be used instead.
 
 ### DATASET
 
 Parameters that need to be specified when using  `--dataset True`.
 
-`loops` `(mandatory, int)`: number of times the dataset containing patches with at least one cluster within will be added again to training set with random variations (translations).
+- `loops` `(mandatory, int)`: number of times the dataset containing patches with at least one cluster within will be added again to training set with random variations (translations).
 > **Note**: Eventually, random rotations will be added as well.
 
-`fit_up_to_mode` `(mandatory, bool)`: if False, MAD is not used and the FWHM of a gaussian fit up to mode is used instead (see V. Bonjean 2018 for more details).
-`range_compression` `(mandatory, bool)`: if True, applies range compression for preprocess.
-`plot_dataset` `(mandatory, bool)`: if True, saves dataset plots in /output/dd-mm-yyyy/figures/.
+- `fit_up_to_mode` `(mandatory, bool)`: if False, MAD is not used and the FWHM of a gaussian fit up to mode is used instead (see V. Bonjean 2018 for more details).
+- `range_compression` `(mandatory, bool)`: if True, applies range compression for preprocess.
+- `plot_dataset` `(mandatory, bool)`: if True, saves dataset plots in /output/dd-mm-yyyy/figures/.
 
 ### TRAIN
 
 Parameters that need to be specified when using  `--train True`.
 
-`epochs` `(mandatory, int)`:  epochs number.
-`batch` `(mandatory, int)`: batch size.
-`lr` `(mandatory, float)`: learning rate.
-`patience` `(mandatory, int)`: mimimum epochs number.
-`model` `(mandatory, str)`: architecture used.  Options are (from the **overview** list): 'unet', 'vnet', 'unet_plus', 'r2u_net', 'attn_net', 'resunet_a', 'u2net', 'unet_3plus'.
-`loss` `(mandatory, str)`: loss function used.  Options are (from the **overview** list): 'binary_crossentropy', 'focal_loss', 'dice_loss', 'focal_dice_loss', 'tversky_loss', 'focal_tversky_loss', 'cosine_tversky_loss', 'combo_loss', 'mixed_focal_loss'.
-`optimizer` `(mandatory, str)`: optimization algorithm. Either 'adam' or 'sgd'.
+- `epochs` `(mandatory, int)`:  epochs number.
+- `batch` `(mandatory, int)`: batch size.
+- `lr` `(mandatory, float)`: learning rate.
+- `patience` `(mandatory, int)`: mimimum epochs number.
+- `model` `(mandatory, str)`: architecture used.  Options are (from the **overview** list): 'unet', 'vnet', 'unet_plus', 'r2u_net', 'attn_net', 'resunet_a', 'u2net', 'unet_3plus'.
+- `loss` `(mandatory, str)`: loss function used.  Options are (from the **overview** list): 'binary_crossentropy', 'focal_loss', 'dice_loss', 'focal_dice_loss', 'tversky_loss', 'focal_tversky_loss', 'cosine_tversky_loss', 'combo_loss', 'mixed_focal_loss'.
+- `optimizer` `(mandatory, str)`: optimization algorithm. Either 'adam' or 'sgd'.
 
 ## PREDICT
 
 Parameters that need to be specified when using  `--predict True`.
 
-`plot_prediction` `(mandatory, bool)`:  if True, save prediction plots in /output/dd-mm-yyyy/figures/.
-`plot_individual_patchs` `(mandatory, bool)`:  if True, save prediction plots in /output/dd-mm-yyyy/figures/.
+- `plot_prediction` `(mandatory, bool)`:  if True, save prediction plots in /output/dd-mm-yyyy/figures/.
+- `plot_individual_patchs` `(mandatory, bool)`:  if True, save prediction plots in /output/dd-mm-yyyy/figures/.
 
 # ACKNOWLEDGMENTS
 
