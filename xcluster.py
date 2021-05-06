@@ -7,8 +7,16 @@ Main script
 
 import argparse
 from functions import GenerateFiles, MakeData, CNNSegmentation
-import warnings
 import importlib
+import warnings
+import logging
+cs_logger = logging.getLogger('cutsky')
+cs_logger.setLevel(logging.WARNING)
+cs_logger.propagate = False
+hpproj_logger = logging.getLogger('hpproj')
+hpproj_logger.setLevel(logging.WARNING)
+mpl_logger = logging.getLogger('matplotlib')
+mpl_logger.setLevel(logging.WARNING)
 
 #------------------------------------------------------------------#
 # # # # # Script # # # # #
@@ -38,7 +46,7 @@ if args.nodes is None:
 
 GenFiles = GenerateFiles(dataset = p.dataset, bands=p.bands, output_path = p.path)
 MData = MakeData(dataset = p.dataset, bands=p.bands, planck_path=p.planck_path, milca_path=p.milca_path, disk_radius= p.disk_radius, output_path = p.path)
-unet = CNNSegmentation(model = p.model, dataset = p.dataset, bands=p.bands, planck_path=p.planck_path, milca_path=p.milca_path, epochs=p.epochs, batch=p.batch, 
+CNN = CNNSegmentation(model = p.model, dataset = p.dataset, bands=p.bands, planck_path=p.planck_path, milca_path=p.milca_path, epochs=p.epochs, batch=p.batch, 
                        lr=p.lr, patience=p.patience, loss=p.loss, optimizer=p.optimizer, disk_radius=p.disk_radius, output_path = p.path)
 
 if args.make_directories == True:
@@ -57,7 +65,7 @@ if args.dataset == True:
     MData.preprocess(leastsq=p.fit_up_to_mode, range_comp=p.range_compression, plot=p.plot_dataset)
 
 if args.train == True:
-    unet.train_model()
+    CNN.train_model()
 
 if args.predict == True:
-    unet.evaluate_prediction(plot=p.plot_prediction, plot_patch = p.plot_individual_patchs)
+    CNN.evaluate_prediction(plot=p.plot_prediction, plot_patch = p.plot_individual_patchs)

@@ -39,9 +39,11 @@ def unet(opt,input_size, lossfxn):
     pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
 
     conv3 = UnetConv2D(pool2, 128, is_batchnorm=True, name='conv3')
+    conv3 = Dropout(0.2,name='drop_conv3')(conv3)
     pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
 
     conv4 = UnetConv2D(pool3, 256, is_batchnorm=True, name='conv4')
+    conv4 = Dropout(0.2,name='drop_conv4')(conv4)
     pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
 
     conv5 = Conv2D(512, (3, 3), activation='relu', kernel_initializer=kinit, padding='same')(pool4)

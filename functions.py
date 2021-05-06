@@ -982,12 +982,12 @@ class CNNSegmentation(object):
         optimizers_dict = {'sgd': SGD(lr=self.lr, momentum=0.9), 'adam': Adam(learning_rate=self.lr)}
         self.optimizer =  optimizers_dict[optimizer]
         self.optimizer_name =  optimizer
-        losses_dict = {'binary_crossentropy': 'binary_crossentropy', 'tversky_loss': losses.tversky_loss, 'focal_tversky_loss': losses.focal_tversky_loss, 'dice_loss': losses.dice_loss, 
-                       'combo_loss': losses.combo_loss, 'cosine_tversky_loss': losses.cosine_tversky_loss, 'focal_dice_loss': losses.focal_dice_loss, 'focal_loss': losses.focal_loss,
-                       'mixed_focal_loss': losses.mixed_focal_loss}
+        losses_dict = {'binary_crossentropy': 'binary_crossentropy', 'tversky_loss': losses.tversky_loss, 'focal_tversky_loss': losses.focal_tversky_loss(gamma=0.75), 'dice_loss': losses.dice_loss, 
+                       'combo_loss': losses.combo_loss(alpha=0.5,beta=0.5), 'cosine_tversky_loss': losses.cosine_tversky_loss(gamma=1), 'focal_dice_loss': losses.focal_dice_loss(delta=0.7, gamma_fd=0.75), 
+                       'focal_loss': losses.focal_loss(alpha=None, beta=None, gamma_f=2.), 'mixed_focal_loss': losses.mixed_focal_loss(weight=None, alpha=None, beta=None, delta=0.7, gamma_f=2.,gamma_fd=0.75)}
         self.loss = losses_dict[loss]
         self.loss_name = loss
-        model_dict = {'unet': models.unet, 'attn_unet': models.attn_unet, 'attn_reg_d': models.attn_reg_ds, 'attn_reg': models.attn_reg}
+        model_dict = {'unet': models.unet, 'attn_unet': models.attn_unet, 'attn_reg_ds': models.attn_reg_ds, 'attn_reg': models.attn_reg}
         self.model = model_dict[model]
         self.model_name = model
 
@@ -1018,6 +1018,7 @@ class CNNSegmentation(object):
         return train_dataset, val_dataset, test_dataset
 
     def train_model(self):
+        from keras_unet_collection import models
         input_train = np.load(self.dataset_path + 'input_train_pre_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
         input_val = np.load(self.dataset_path + 'input_val_pre_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
         train_dataset, valid_dataset, test_dataset = self.npy_to_tfdata(batch_size=self.batch, buffer_size=1000)
@@ -1032,7 +1033,16 @@ class CNNSegmentation(object):
 
 
         input_size = (self.npix, self.npix, len(self.bands))
-        model = self.model(self.optimizer, input_size, self.loss)
+        model = models.att_unet_2d(input_size, filter_num=[64, 128, 256, 512, 1024], n_labels=2, 
+                           stack_num_down=2, stack_num_up=2, activation='ReLU', 
+                           atten_activation='ReLU', attention='add', output_activation='Sigmoid', 
+                           batch_norm=True, pool=False, unpool=False, freeze_batch_norm=True, 
+                           name='attunet')
+
+        metrics = [losses.dsc, tf.keras.metrics.Recall(), tf.keras.metrics.Precision(), losses.iou]
+        model.compile(loss=self.loss, optimizer=self.optimizer, metrics=metrics) #tf.keras.losses.categorical_crossentropy
+
+        # model = self.model(self.optimizer, input_size, self.loss)
 
         model_history = model.fit(train_dataset,
             validation_data=valid_dataset,
@@ -1397,9 +1407,7 @@ class CNNSegmentation(object):
 
         from tensorflow.keras.utils import CustomObjectScope
 
-        with CustomObjectScope({'iou': losses.iou, 'f1': losses.f1, 'dsc': losses.dsc,'tversky_loss': losses.tversky_loss, 'focal_tversky_loss': losses.focal_tversky_loss, 
-                                'dice_loss': losses.dice_loss, 'combo_loss': losses.combo_loss, 'cosine_tversky_loss': losses.cosine_tversky_loss, 'focal_dice_loss': losses.focal_dice_loss, 
-                                'focal_loss': losses.focal_loss, 'mixed_focal_loss': losses.mixed_focal_loss}):
+        with CustomObjectScope({'iou': losses.iou, 'f1': losses.f1, 'dsc': losses.dsc, self.loss_name: self.loss, 'loss_function': self.loss}):
             model = tf.keras.models.load_model(self.path + "tf_saves/" + self.dataset + "/model_%s_l%s_o%s_f%s_"%(self.model_name, self.loss_name, self.optimizer_name, self.freq) + self.output_name + ".h5")
 
         if plot == True:
