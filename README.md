@@ -68,7 +68,16 @@ Once a model architecture is selected, optimisation of model parameters is based
 
 #### Training
 
+Model is trained using the following parameters, which are specified in the parameter file: epochs, batch size, patience, optimization algorithm and learning rate.
+
 #### Prediction
+
+Once the model is trained, the following detection criterium are used on prediction outputs.
+- A pixel with value above 0.9 with at least 3 adjacent pixels is considered a detection.
+- Center is computed as the barycenter of all adjacent pixels above 0.9.
+- Each detection has a maximum radius of 15 arcmin.
+
+Cluster catalogs are cross matched with detection centers to establish known/unkown detections, as well as the amount of possible detections for each patch. Since patches can overlap one another, duplicate detections are accounted for. Finally, unkown detection centers are cross matched with known IR sources to assess reliability.
 
 
 # Installation 
