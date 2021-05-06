@@ -203,9 +203,11 @@ Parameters that need to be specified when using  `--predict True`.
 
 # ACKNOWLEDGMENTS
 
+This work has made use of the CANDIDE Cluster at the Institut d'Astrophysique de Paris and made possible by grants from the PNCG and the DIM-ACAV.
 
-# CITATION
+# CONTACT
 
+Xavier Jiménez < xavier.jimenez@ens-lyon.fr > < xavierjimenezp@gmail.com >
 
 # LICENSE
 
