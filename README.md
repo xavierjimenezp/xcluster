@@ -190,75 +190,7 @@ Parameters that need to be specified when using  `--train True`.
 Parameters that need to be specified when using  `--predict True`.
 
 `plot_prediction` `(mandatory, bool)`:  if True, save prediction plots in /output/dd-mm-yyyy/figures/.
-`plot_individual_patchs` `(mandatory, bool)`:  if True, save prediction plots in /output/dd-mm-yyyy/figures/.# Galaxy cluster detection through semantic segmentation
-2
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity) [![PyPI license](https://img.shields.io/pypi/l/ansicolortags.svg)](https://pypi.python.org/pypi/ansicolortags/) [![PythonVersion](https://camo.githubusercontent.com/fcb8bcdc6921dd3533a1ed259cebefdacbc27f2148eab6af024f6d6458d5ec1f/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f707974686f6e2d332e36253230253743253230332e37253230253743253230332e38253230253743253230332e392d626c7565)](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8%20%7C%203.9-blue)
-3
-​
-4
-​
-5
-|Version         |Date                          |
-6
-|----------------|-------------------------------|
-7
-|alpha|06/05/2021            |
-8
-​
-9
-![enter image description here](https://github.com/xavierjimenezp/xcluster/blob/main/Figures/mask.png?raw=true)
-10
-​
-11
-# Disclaimer
-12
-xCluster is currentlty under early development and may contain bugs or instabilities. 
-13
-​
-14
-# Overview
-15
-​
-16
-xCluster is an algorithm that uses full sky-maps and galaxy cluster catalogs to train a U-Net-like convolutional neural network (CNN) for semantic segmentation in order to detect unkown clusters. It creates and preprocess the input/output datasets for the CNN, trains it and detects potential galaxy clusters in the test set. Finally, detections are cross-matched with known clusters and reliability is assessed by cross-matching with known IR sources.
-17
-​
-18
-## Dataset creation & preprocessing
-19
-​
-20
-Sky maps are splited with HEALPIX nside=2 into 48 tiles of equal-sized area of 860 square degrees each. Tiles 10, 26, 39, and 42 are used for validation while tile 7 is kept for test. Remaining tiles are left for training.
-21
-​
-22
-> **Note**: Tile and patch refer to the same object.
-23
-​
-24
-### Input & output dataset
-25
-​
-26
-**Training**: Individual patches with size 1.83º x 1.83º  (64 x 64 pixels), and resolution 1.7º, are extracted from the sky maps. These patches contain at least one cluster from the cluster catalog selected in the params file under *dataset*. Multiple patches of the same cluster are extracted with random translations to get and input training set with shape (~ 90,000 x 64 x 64 x ns), where ns is the number of sky-maps used. For each patch, a segmentation image is created where, for each cluster, a circular mask with radius *disk_radius* is created. The output training set input is (~ 90,000 x 64 x 64 x 1).
-27
-​
-28
-**Validation**: Same as training. input shape(~ 10,000 x 64 x 64 x ns).
-29
-​
-30
-**Test**: Tile number 7 is entirely splitted into patches to cover the whole HEALPIX. Some patches do not contain any cluster. Segmentation images are created the same way as training and validation.
-31
-​
-32
-### Preprocessing
-33
-​
-34
-Input data is preprocessed individually for training, validation and test individually. The shapes of the pixel distributions of the Planck HFI frequency maps are **very non Gaussian**, preventing a simple normalisation of the maps to their means and their standard
-35
-deviations. Therefore, data is standardized using the **median absolute deviation** (**MAD**), which is a robust measure of the variability of a univariate sample of quantitative data. Then, we apply **range compression** (an arcsinh function) to suppress the high amplitude values.
+`plot_individual_patchs` `(mandatory, bool)`:  if True, save prediction plots in /output/dd-mm-yyyy/figures/.
 
 # ACKNOWLEDGMENTS
 
