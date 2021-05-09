@@ -105,19 +105,7 @@ Code is ready to run !
 
 Modify the `params.py` file to specify paths to *planck* HFI full sky maps and MILCA full sky map. Files should be named as following
 
-`HFI_SkyMap_100-field-IQU_2048_R3.00_full.fits`
-
-`HFI_SkyMap_143-field-IQU_2048_R3.00_full.fits`
-
-`HFI_SkyMap_143-field-IQU_2048_R3.00_full.fits`
-
-`HFI_SkyMap_353-psb-field-IQU_2048_R3.00_full.fits`
-
-`HFI_SkyMap_545-field-Int_2048_R3.00_full.fits`
-
-`HFI_SkyMap_857-field-Int_2048_R3.00_full.fits`
-
-`milca_ymaps.fits`
+`HFI_SkyMap_100-field-IQU_2048_R3.00_full.fits`, `HFI_SkyMap_143-field-IQU_2048_R3.00_full.fits`, `HFI_SkyMap_143-field-IQU_2048_R3.00_full.fits`, `HFI_SkyMap_353-psb-field-IQU_2048_R3.00_full.fits`, `HFI_SkyMap_545-field-Int_2048_R3.00_full.fits`, `HFI_SkyMap_857-field-Int_2048_R3.00_full.fits`, `milca_ymaps.fits`
 
 The following commands take *planck* 6 frenquency maps and preprocess them. 
 
