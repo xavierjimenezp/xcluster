@@ -37,33 +37,34 @@ deviations. Therefore, data is standardized using the **median absolute deviatio
 
 U-net is a convolutional neural network with an encoder-decoder architecture which enables end-to-end feature extraction and pixel classification. It was originally proposed for the semantic segmentation of medical images in 2015. Since then, many variants based on the U-Net architecture have been proposed. xCluster can use any of the following architectures, which need to be specified in the parameter file.
 
-|**Model Name**|**Reference**|
-|--------------|-------------|
-|[![Generic badge](https://img.shields.io/badge/U_Net-Up-green.svg)](https://shields.io/)| [Ronneberger et al. (2015)](https://link.springer.com/chapter/10.1007/978-3-319-24574-4_28) |
-|[![Generic badge](https://img.shields.io/badge/V_Net-Down-red.svg)](https://shields.io/)| [Milletari et al. (2016)](https://arxiv.org/abs/1606.04797)|
-| [![Generic badge](https://img.shields.io/badge/U_Net++-Up-green.svg)](https://shields.io/)| [Zhou et al. (2018)](https://link.springer.com/chapter/10.1007/978-3-030-00889-5_1) |
-|[![Generic badge](https://img.shields.io/badge/Attention_U_Net-Up-green.svg)](https://shields.io/)| [Oktay et al. (2018)](https://arxiv.org/abs/1804.03999) |
-|[![Generic badge](https://img.shields.io/badge/ResUNet_a-Up-green.svg)](https://shields.io/)| [Diakogiannis et al. (2020)](https://doi.org/10.1016/j.isprsjprs.2020.01.013) |
-|[![Generic badge](https://img.shields.io/badge/U^2_Net-Up-green.svg)](https://shields.io/)| [Qin et al. (2020)](https://arxiv.org/abs/2005.09007) |
-|[![Generic badge](https://img.shields.io/badge/U_Net_3+-Up-green.svg)](https://shields.io/)| [Huang et al. (2020)](https://arxiv.org/abs/2004.08790) |
+|**Param file name**|**Model Name**|**Reference**|
+|--------------|--------------|-------------|
+|`unet`|[![Generic badge](https://img.shields.io/badge/U_Net-Up-green.svg)](https://shields.io/)| [Ronneberger et al. (2015)](https://link.springer.com/chapter/10.1007/978-3-319-24574-4_28) |
+|`vnet`|[![Generic badge](https://img.shields.io/badge/V_Net-Down-red.svg)](https://shields.io/)| [Milletari et al. (2016)](https://arxiv.org/abs/1606.04797)|
+|`r2u_net`| [![Generic badge](https://img.shields.io/badge/R2U_Net-Up-green.svg)](https://shields.io/)| [Alom et al. (2018)](https://arxiv.org/abs/1802.06955) |
+|`unet_plus`| [![Generic badge](https://img.shields.io/badge/U_Net++-Up-green.svg)](https://shields.io/)| [Zhou et al. (2018)](https://link.springer.com/chapter/10.1007/978-3-030-00889-5_1) |
+|`attn_net`|[![Generic badge](https://img.shields.io/badge/Attention_U_Net-Up-green.svg)](https://shields.io/)| [Oktay et al. (2018)](https://arxiv.org/abs/1804.03999) |
+|`resunet_a`|[![Generic badge](https://img.shields.io/badge/ResUNet_a-Up-green.svg)](https://shields.io/)| [Diakogiannis et al. (2020)](https://doi.org/10.1016/j.isprsjprs.2020.01.013) |
+|`u2net`|[![Generic badge](https://img.shields.io/badge/U^2_Net-Up-green.svg)](https://shields.io/)| [Qin et al. (2020)](https://arxiv.org/abs/2005.09007) |
+|`unet_3plus`|[![Generic badge](https://img.shields.io/badge/U_Net_3+-Up-green.svg)](https://shields.io/)| [Huang et al. (2020)](https://arxiv.org/abs/2004.08790) |
 
 Tensorflow implementations provided by python package [**`keras_unet_collection`**](https://github.com/yingkaisha/keras-unet-collection).
 
 #### Loss function
 
-Once a model architecture is selected, optimisation of model parameters is based on minimisation of the loss function during training. The most widely used for classification is binary cross-entropy. However, it is not suited for segmentation of highly imbalanced datasets. Since then, other loss functions have been deployed in order to adress this problem. xCluster can use any of the following loss functions, which need to be specified in the parameter file.
+Once a model architecture is selected, optimisation of model parameters is based on minimisation of the loss function during training. The most widely used one for classification is binary cross-entropy. However, it is not suited for segmentation of highly imbalanced datasets. Since then, other loss functions have been deployed in order to adress this problem. xCluster can use any of the following loss functions, which need to be specified in the parameter file.
 
-|**Loss Function**|**Reference**|
-|--------------------|-------------|
-| [![Generic badge](https://img.shields.io/badge/Binary_crossentropy-Up-green.svg)](https://shields.io/) |  |
-|[![Generic badge](https://img.shields.io/badge/Focal_loss-Up-green.svg)](https://shields.io/)|  |
-|[![Generic badge](https://img.shields.io/badge/Dice_loss-Up-green.svg)](https://shields.io/)| [Sudre et al. (2017)](https://link.springer.com/chapter/10.1007/978-3-319-67558-9_28) |
-|[![Generic badge](https://img.shields.io/badge/Focal_Dice_loss-Up-green.svg)](https://shields.io/)| [Sudre et al. (2017)](https://link.springer.com/chapter/10.1007/978-3-319-67558-9_28)  |
-|[![Generic badge](https://img.shields.io/badge/Tversky_loss-Up-green.svg)](https://shields.io/)| [Hashemi et al. (2018)](https://ieeexplore.ieee.org/abstract/document/8573779) |
-|[![Generic badge](https://img.shields.io/badge/Focal_Tversky_loss-Up-green.svg)](https://shields.io/)| [Abraham et al. (2019)](https://ieeexplore.ieee.org/abstract/document/8759329) |
-|[![Generic badge](https://img.shields.io/badge/Cosine_Tversky_loss-Up-green.svg)](https://shields.io/)| [Michael Yeung et al. (2021)](https://arxiv.org/abs/2102.04525) |
-|[![Generic badge](https://img.shields.io/badge/Combo_loss-Up-green.svg)](https://shields.io/)| [Saeid Asgari Taghanaki et al. (2018)](https://arxiv.org/abs/1805.02798) |
-|[![Generic badge](https://img.shields.io/badge/Mixed_focal_loss-Up-green.svg)](https://shields.io/)| [Michael Yeung et al. (2021)](https://arxiv.org/abs/2102.04525) |
+|**Param file name**|**Loss Function**|**Reference**|
+|-------------------|--------------------|-------------|
+|`binary_crossentropy`| [![Generic badge](https://img.shields.io/badge/Binary_crossentropy-Up-green.svg)](https://shields.io/) |  |
+|`focal_loss`|[![Generic badge](https://img.shields.io/badge/Focal_loss-Up-green.svg)](https://shields.io/)|  |
+|`dice_loss`|[![Generic badge](https://img.shields.io/badge/Dice_loss-Up-green.svg)](https://shields.io/)| [Sudre et al. (2017)](https://link.springer.com/chapter/10.1007/978-3-319-67558-9_28) |
+|`focal_dice_loss`|[![Generic badge](https://img.shields.io/badge/Focal_Dice_loss-Up-green.svg)](https://shields.io/)| [Sudre et al. (2017)](https://link.springer.com/chapter/10.1007/978-3-319-67558-9_28)  |
+|`tversky_loss`|[![Generic badge](https://img.shields.io/badge/Tversky_loss-Up-green.svg)](https://shields.io/)| [Hashemi et al. (2018)](https://ieeexplore.ieee.org/abstract/document/8573779) |
+|`focal_tversky_loss`|[![Generic badge](https://img.shields.io/badge/Focal_Tversky_loss-Up-green.svg)](https://shields.io/)| [Abraham et al. (2019)](https://ieeexplore.ieee.org/abstract/document/8759329) |
+|`cosine_tversky_loss`|[![Generic badge](https://img.shields.io/badge/Cosine_Tversky_loss-Up-green.svg)](https://shields.io/)| [Michael Yeung et al. (2021)](https://arxiv.org/abs/2102.04525) |
+|`combo_loss`|[![Generic badge](https://img.shields.io/badge/Combo_loss-Up-green.svg)](https://shields.io/)| [Saeid Asgari Taghanaki et al. (2018)](https://arxiv.org/abs/1805.02798) |
+|`mixed_focal_loss`|[![Generic badge](https://img.shields.io/badge/Mixed_focal_loss-Up-green.svg)](https://shields.io/)| [Michael Yeung et al. (2021)](https://arxiv.org/abs/2102.04525) |
 
 #### Training
 
