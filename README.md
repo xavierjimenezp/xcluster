@@ -60,10 +60,10 @@ Once a model architecture is selected, optimisation of model parameters is based
 |`focal_loss`|[![Generic badge](https://img.shields.io/badge/Focal_loss-Up-green.svg)](https://shields.io/)|  |
 |`dice_loss`|[![Generic badge](https://img.shields.io/badge/Dice_loss-Up-green.svg)](https://shields.io/)| [Sudre et al. (2017)](https://link.springer.com/chapter/10.1007/978-3-319-67558-9_28) |
 |`focal_dice_loss`|[![Generic badge](https://img.shields.io/badge/Focal_Dice_loss-Up-green.svg)](https://shields.io/)| [Sudre et al. (2017)](https://link.springer.com/chapter/10.1007/978-3-319-67558-9_28)  |
+|`combo_loss`|[![Generic badge](https://img.shields.io/badge/Combo_loss-Up-green.svg)](https://shields.io/)| [Saeid Asgari Taghanaki et al. (2018)](https://arxiv.org/abs/1805.02798) |
 |`tversky_loss`|[![Generic badge](https://img.shields.io/badge/Tversky_loss-Up-green.svg)](https://shields.io/)| [Hashemi et al. (2018)](https://ieeexplore.ieee.org/abstract/document/8573779) |
 |`focal_tversky_loss`|[![Generic badge](https://img.shields.io/badge/Focal_Tversky_loss-Up-green.svg)](https://shields.io/)| [Abraham et al. (2019)](https://ieeexplore.ieee.org/abstract/document/8759329) |
 |`cosine_tversky_loss`|[![Generic badge](https://img.shields.io/badge/Cosine_Tversky_loss-Up-green.svg)](https://shields.io/)| [Michael Yeung et al. (2021)](https://arxiv.org/abs/2102.04525) |
-|`combo_loss`|[![Generic badge](https://img.shields.io/badge/Combo_loss-Up-green.svg)](https://shields.io/)| [Saeid Asgari Taghanaki et al. (2018)](https://arxiv.org/abs/1805.02798) |
 |`mixed_focal_loss`|[![Generic badge](https://img.shields.io/badge/Mixed_focal_loss-Up-green.svg)](https://shields.io/)| [Michael Yeung et al. (2021)](https://arxiv.org/abs/2102.04525) |
 
 #### Training
