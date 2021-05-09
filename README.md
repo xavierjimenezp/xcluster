@@ -140,33 +140,34 @@ The `xcluster.py` python file takes the following arguments. Multiple arguments 
 
 ## Parameters
 
-List of parameters that need to be specified in the parameters input file. By default, xcluster will look for `params.py` if no file is specified under `--input`.
+List of parameters that need to be specified in the parameters input file. By default, xcluster will look for `params.py` if no file is specified under `--input`. 
+> **Note**:`global` parameters are needed for all steps.
 
 ### PATHS
 Paths that need to be specified for all xcluster steps. 
 
-- `planck_path` `(mandatory, str)`:  path to planck HFI full sky maps. Check **Quickstart** section for file names.
-- `milca_path` `(mandatory, str)`: path to MILCA full sky map. Check **Quickstart** section for file name.
+- `planck_path` `(global, str)`:  path to planck HFI full sky maps. Check **Quickstart** section for file names.
+- `milca_path` `(global, str)`: path to MILCA full sky map. Check **Quickstart** section for file name.
 
 > **Note**: Eventually, more sky maps will be added and more parameters will be added.
 
-### GLOBAL
+### GENERAL
 Parameters that need to be specified for all xcluster steps. 
 
-- `dataset` `(mandatory, str)`: cluster catalog that will be used to extract patches from full sky-maps.  Options are: 'planck_z', 'planck_no-z', 'MCXC', 'RM30', 'RM50'. Check V. Bonjean 2018 for catalog definitions.
-- `bands` `(mandatory, list of str)`: list of sky maps that will be used (e.g ['100GHz','143GHz','217GHz','353GHz','545GHz','857GHz', 'y-map'] contains all possible sky maps). 
-- `merge_daily_output_directory` `(mandatory, bool)`: if True, will merge daily output directory with the most recent directory. if False, will create a new directory at output/*dataset*/yyyy-mm-dd.
-- `disk_radius`  `(mandatory, float)` = disk radius (in arcmin) used circular segmentation output files. If None, a distribution between 0 and 15 arcmin will be used instead.
+- `dataset` `(global, str)`: cluster catalog that will be used to extract patches from full sky-maps.  Options are: 'planck_z', 'planck_no-z', 'MCXC', 'RM30', 'RM50'. Check V. Bonjean 2018 for catalog definitions.
+- `bands` `(global, list of str)`: list of sky maps that will be used (e.g ['100GHz','143GHz','217GHz','353GHz','545GHz','857GHz', 'y-map'] contains all possible sky maps). 
+- `merge_daily_output_directory` `(global, bool)`: if True, will merge daily output directory with the most recent directory. if False, will create a new directory at output/*dataset*/yyyy-mm-dd.
+- `disk_radius`  `(global, float)` = disk radius (in arcmin) used circular segmentation output files. If None, a distribution between 0 and 15 arcmin will be used instead.
 
 ### DATASET
 
 Parameters that need to be specified when using  `--dataset True`.
 
-- `loops` `(mandatory, int)`: number of times the dataset containing patches with at least one cluster within will be added again to training set with random variations (translations).
+- `loops` `(global, int)`: number of times the dataset containing patches with at least one cluster within will be added again to training set with random variations (translations).
 > **Note**: Eventually, random rotations will be added as well.
 
 - `fit_up_to_mode` `(mandatory, bool)`: if False, MAD is not used and the FWHM of a gaussian fit up to mode is used instead (see V. Bonjean 2018 for more details).
-- `range_compression` `(mandatory, bool)`: if True, applies range compression for preprocess.
+- `range_compression` `(global, bool)`: if True, applies range compression for preprocess.
 - `plot_dataset` `(mandatory, bool)`: if True, saves dataset plots in /output/yyyy-mm-dd/figures/.
 
 ### TRAIN
