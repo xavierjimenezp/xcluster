@@ -41,11 +41,11 @@ U-net is a convolutional neural network with an encoder-decoder architecture whi
 |--------------|-------------|
 |[![Generic badge](https://img.shields.io/badge/U_Net-Up-green.svg)](https://shields.io/)| [Ronneberger et al. (2015)](https://link.springer.com/chapter/10.1007/978-3-319-24574-4_28) |
 |[![Generic badge](https://img.shields.io/badge/V_Net-Down-red.svg)](https://shields.io/)| [Milletari et al. (2016)](https://arxiv.org/abs/1606.04797)|
-| [![Generic badge](https://img.shields.io/badge/U_Net++-Down-red.svg)](https://shields.io/)| [Zhou et al. (2018)](https://link.springer.com/chapter/10.1007/978-3-030-00889-5_1) |
+| [![Generic badge](https://img.shields.io/badge/U_Net++-Up-green.svg)](https://shields.io/)| [Zhou et al. (2018)](https://link.springer.com/chapter/10.1007/978-3-030-00889-5_1) |
 |[![Generic badge](https://img.shields.io/badge/Attention_U_Net-Up-green.svg)](https://shields.io/)| [Oktay et al. (2018)](https://arxiv.org/abs/1804.03999) |
-|[![Generic badge](https://img.shields.io/badge/ResUNet_a-Down-red.svg)](https://shields.io/)| [Diakogiannis et al. (2020)](https://doi.org/10.1016/j.isprsjprs.2020.01.013) |
-|[![Generic badge](https://img.shields.io/badge/U^2_Net-down-red.svg)](https://shields.io/)| [Qin et al. (2020)](https://arxiv.org/abs/2005.09007) |
-|[![Generic badge](https://img.shields.io/badge/U_Net_3+-Down-red.svg)](https://shields.io/)| [Huang et al. (2020)](https://arxiv.org/abs/2004.08790) |
+|[![Generic badge](https://img.shields.io/badge/ResUNet_a-Up-green.svg)](https://shields.io/)| [Diakogiannis et al. (2020)](https://doi.org/10.1016/j.isprsjprs.2020.01.013) |
+|[![Generic badge](https://img.shields.io/badge/U^2_Net-Up-green.svg)](https://shields.io/)| [Qin et al. (2020)](https://arxiv.org/abs/2005.09007) |
+|[![Generic badge](https://img.shields.io/badge/U_Net_3+-Up-green.svg)](https://shields.io/)| [Huang et al. (2020)](https://arxiv.org/abs/2004.08790) |
 
 Tensorflow implementations provided by python package [**`keras_unet_collection`**](https://github.com/yingkaisha/keras-unet-collection).
 
@@ -167,7 +167,7 @@ Parameters that need to be specified for all xcluster steps.
 
 - `dataset` `(mandatory, str)`: cluster catalog that will be used to extract patches from full sky-maps.  Options are: 'planck_z', 'planck_no-z', 'MCXC', 'RM30', 'RM50'. Check V. Bonjean 2018 for catalog definitions.
 - `bands` `(mandatory, list of str)`: list of sky maps that will be used (e.g ['100GHz','143GHz','217GHz','353GHz','545GHz','857GHz', 'y-map'] contains all possible sky maps). 
-- `merge_daily_output_directory` `(mandatory, bool)`: if True, will merge daily output directory with the most recent directory. if False, will create a new directory at output/*dataset*/dd-mm-yyy.
+- `merge_daily_output_directory` `(mandatory, bool)`: if True, will merge daily output directory with the most recent directory. if False, will create a new directory at output/*dataset*/yyyy-mm-dd.
 - `disk_radius`  `(mandatory, float)` = disk radius (in arcmin) used circular segmentation output files. If None, a distribution between 0 and 15 arcmin will be used instead.
 
 ### DATASET
@@ -179,7 +179,7 @@ Parameters that need to be specified when using  `--dataset True`.
 
 - `fit_up_to_mode` `(mandatory, bool)`: if False, MAD is not used and the FWHM of a gaussian fit up to mode is used instead (see V. Bonjean 2018 for more details).
 - `range_compression` `(mandatory, bool)`: if True, applies range compression for preprocess.
-- `plot_dataset` `(mandatory, bool)`: if True, saves dataset plots in /output/dd-mm-yyyy/figures/.
+- `plot_dataset` `(mandatory, bool)`: if True, saves dataset plots in /output/yyyy-mm-dd/figures/.
 
 ### TRAIN
 
@@ -197,8 +197,8 @@ Parameters that need to be specified when using  `--train True`.
 
 Parameters that need to be specified when using  `--predict True`.
 
-- `plot_prediction` `(mandatory, bool)`:  if True, save prediction plots in /output/dd-mm-yyyy/figures/.
-- `plot_individual_patchs` `(mandatory, bool)`:  if True, save prediction plots in /output/dd-mm-yyyy/figures/.
+- `plot_prediction` `(mandatory, bool)`:  if True, save prediction plots in /output/yyyy-mm-dd/figures/.
+- `plot_individual_patchs` `(mandatory, bool)`:  if True, save prediction plots in /output/yyyy-mm-dd/figures/.
 
 # ACKNOWLEDGMENTS
 
