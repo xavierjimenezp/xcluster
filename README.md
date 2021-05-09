@@ -1,7 +1,6 @@
 # Galaxy cluster detection through semantic segmentation
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity) [![PyPI license](https://img.shields.io/pypi/l/ansicolortags.svg)](https://pypi.python.org/pypi/ansicolortags/) [![PythonVersion](https://camo.githubusercontent.com/fcb8bcdc6921dd3533a1ed259cebefdacbc27f2148eab6af024f6d6458d5ec1f/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f707974686f6e2d332e36253230253743253230332e37253230253743253230332e38253230253743253230332e392d626c7565)](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8%20%7C%203.9-blue)
 
-
 |Version         |Date                          |
 |----------------|-------------------------------|
 |alpha|06/05/2021            |
@@ -40,13 +39,13 @@ U-net is a convolutional neural network with an encoder-decoder architecture whi
 
 |**Model Name**|**Reference**|
 |--------------|-------------|
-| U-net             | [Ronneberger et al. (2015)](https://link.springer.com/chapter/10.1007/978-3-319-24574-4_28) |
-| V-net             | [Milletari et al. (2016)](https://arxiv.org/abs/1606.04797) |
-| U-net++           | [Zhou et al. (2018)](https://link.springer.com/chapter/10.1007/978-3-030-00889-5_1) |
-| Attention U-net  | [Oktay et al. (2018)](https://arxiv.org/abs/1804.03999) |
-| ResUnet-         | [Diakogiannis et al. (2020)](https://doi.org/10.1016/j.isprsjprs.2020.01.013) |
-| U^2-Net          | [Qin et al. (2020)](https://arxiv.org/abs/2005.09007) |
-| UNET 3+          | [Huang et al. (2020)](https://arxiv.org/abs/2004.08790) |
+|[![Generic badge](https://img.shields.io/badge/U_Net-Up-green.svg)](https://shields.io/)| [Ronneberger et al. (2015)](https://link.springer.com/chapter/10.1007/978-3-319-24574-4_28) |
+|[![Generic badge](https://img.shields.io/badge/V_Net-Down-red.svg)](https://shields.io/)| [Milletari et al. (2016)](https://arxiv.org/abs/1606.04797)|
+| [![Generic badge](https://img.shields.io/badge/U_Net++-Down-red.svg)](https://shields.io/)| [Zhou et al. (2018)](https://link.springer.com/chapter/10.1007/978-3-030-00889-5_1) |
+|[![Generic badge](https://img.shields.io/badge/Attention_U_Net-Up-green.svg)](https://shields.io/)| [Oktay et al. (2018)](https://arxiv.org/abs/1804.03999) |
+|[![Generic badge](https://img.shields.io/badge/ResUNet_a-Down-red.svg)](https://shields.io/)| [Diakogiannis et al. (2020)](https://doi.org/10.1016/j.isprsjprs.2020.01.013) |
+|[![Generic badge](https://img.shields.io/badge/U^2_Net-down-red.svg)](https://shields.io/)| [Qin et al. (2020)](https://arxiv.org/abs/2005.09007) |
+|[![Generic badge](https://img.shields.io/badge/U_Net_3+-Down-red.svg)](https://shields.io/)| [Huang et al. (2020)](https://arxiv.org/abs/2004.08790) |
 
 Tensorflow implementations provided by python package [**`keras_unet_collection`**](https://github.com/yingkaisha/keras-unet-collection).
 
@@ -56,15 +55,15 @@ Once a model architecture is selected, optimisation of model parameters is based
 
 |**Loss Function**|**Reference**|
 |--------------------|-------------|
-| Binary cross-entropy |  |
-| Focal loss           |  |
-| Dice loss            | [Sudre et al. (2017)](https://link.springer.com/chapter/10.1007/978-3-319-67558-9_28) |
-| Focal Dice loss      | [Sudre et al. (2017)](https://link.springer.com/chapter/10.1007/978-3-319-67558-9_28)  |
-| Tversky loss         | [Hashemi et al. (2018)](https://ieeexplore.ieee.org/abstract/document/8573779) |
-| Focal Tversky loss   | [Abraham et al. (2019)](https://ieeexplore.ieee.org/abstract/document/8759329) |
-| Cosine Tversky loss  | [Michael Yeung et al. (2021)](https://arxiv.org/abs/2102.04525) |
-| Combo loss           | [Saeid Asgari Taghanaki et al. (2018)](https://arxiv.org/abs/1805.02798) |
-| Mixed Focal loss     | [Michael Yeung et al. (2021)](https://arxiv.org/abs/2102.04525) |
+| [![Generic badge](https://img.shields.io/badge/Binary_crossentropy-Up-green.svg)](https://shields.io/) |  |
+|[![Generic badge](https://img.shields.io/badge/Focal_loss-Up-green.svg)](https://shields.io/)|  |
+|[![Generic badge](https://img.shields.io/badge/Dice_loss-Up-green.svg)](https://shields.io/)| [Sudre et al. (2017)](https://link.springer.com/chapter/10.1007/978-3-319-67558-9_28) |
+|[![Generic badge](https://img.shields.io/badge/Focal_Dice_loss-Up-green.svg)](https://shields.io/)| [Sudre et al. (2017)](https://link.springer.com/chapter/10.1007/978-3-319-67558-9_28)  |
+|[![Generic badge](https://img.shields.io/badge/Tversky_loss-Up-green.svg)](https://shields.io/)| [Hashemi et al. (2018)](https://ieeexplore.ieee.org/abstract/document/8573779) |
+|[![Generic badge](https://img.shields.io/badge/Focal_Tversky_loss-Up-green.svg)](https://shields.io/)| [Abraham et al. (2019)](https://ieeexplore.ieee.org/abstract/document/8759329) |
+|[![Generic badge](https://img.shields.io/badge/Cosine_Tversky_loss-Up-green.svg)](https://shields.io/)| [Michael Yeung et al. (2021)](https://arxiv.org/abs/2102.04525) |
+|[![Generic badge](https://img.shields.io/badge/Combo_loss-Up-green.svg)](https://shields.io/)| [Saeid Asgari Taghanaki et al. (2018)](https://arxiv.org/abs/1805.02798) |
+|[![Generic badge](https://img.shields.io/badge/Mixed_focal_loss-Up-green.svg)](https://shields.io/)| [Michael Yeung et al. (2021)](https://arxiv.org/abs/2102.04525) |
 
 #### Training
 
