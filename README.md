@@ -3,7 +3,7 @@
 
 |Version         |Date                          |
 |----------------|-------------------------------|
-|alpha|06/05/2021            |
+|alpha|10/05/2021            |
 
 ![enter image description here](https://github.com/xavierjimenezp/xcluster/blob/main/Figures/mask.png?raw=true)
 
@@ -12,7 +12,7 @@ xCluster is currentlty under early development and may contain bugs or instabili
 
 # Overview
 
-xCluster is an algorithm that uses full sky-maps and galaxy cluster catalogs to train a U-Net-like convolutional neural network (CNN) for semantic segmentation in order to detect unkown clusters. It creates and preprocess the input/output datasets for the CNN, trains it and detects potential galaxy clusters in the test set. Finally, detections are cross-matched with known clusters and reliability is assessed by cross-matching with known IR sources.
+xCluster is an algorithm that uses full sky-maps and galaxy cluster catalogs to train a U-Net-like convolutional neural network (CNN) for semantic segmentation in order to detect unkown clusters. It creates and preprocess the input/output datasets for the CNN, trains it and detects potential galaxy clusters in the test set. Finally, detections are cross-matched with known clusters and reliability is assessed by cross-matching with known IR and point sources.
 
 ## Dataset creation & preprocessing
 
@@ -77,7 +77,7 @@ Once the model is trained, the following detection criterium are used on predict
 - Center is computed as the barycenter of all adjacent pixels above 0.9.
 - Each detection has a maximum radius of 15 arcmin.
 
-Cluster catalogs are cross matched with detection centers to establish known/unkown detections, as well as the amount of possible detections for each patch. Since patches can overlap one another, duplicate detections are accounted for. Finally, unkown detection centers are cross matched with known IR sources to assess reliability.
+Cluster catalogs are cross matched with detection centers to establish known/unkown detections, as well as the amount of possible detections for each patch. Since patches can overlap one another, duplicate detections are accounted for. Finally, unkown detection centers are cross matched with known IR and point sources to assess reliability.
 
 
 # Installation 
