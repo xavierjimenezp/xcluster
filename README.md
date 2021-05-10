@@ -183,21 +183,21 @@ Parameters that need to be specified when using  `--train True`.
 - `loss` `(mandatory, str)`: loss function used.  Options are (from the **overview** list): 'binary_crossentropy', 'focal_loss', 'dice_loss', 'focal_dice_loss', 'tversky_loss', 'focal_tversky_loss', 'cosine_tversky_loss', 'combo_loss', 'mixed_focal_loss'.
 - `optimizer` `(mandatory, str)`: optimization algorithm. Either 'adam' or 'sgd'.
 
-## PREDICT
+### PREDICT
 
 Parameters that need to be specified when using  `--predict True`.
 
 - `plot_prediction` `(mandatory, bool)`:  if True, save prediction plots in /output/yyyy-mm-dd/figures/.
 - `plot_individual_patchs` `(mandatory, bool)`:  if True, save prediction plots in /output/yyyy-mm-dd/figures/.
 
-# ACKNOWLEDGMENTS
+# Acknowledgments
 
 This work has made use of the CANDIDE Cluster at the Institut d'Astrophysique de Paris and made possible by grants from the PNCG and the DIM-ACAV.
 
-# CONTACT
+# Contact
 
 Xavier Jiménez < xavier.jimenez@ens-lyon.fr > < xavierjimenezp@gmail.com >
 
-# LICENSE
+# License
 
 [MIT License](https://github.com/xavierjimenezp/xcluster/blob/main/LICENSE)
