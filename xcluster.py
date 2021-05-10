@@ -44,10 +44,10 @@ else:
 if args.nodes is None:
         args.nodes = 1
 
-GenFiles = GenerateFiles(dataset = p.dataset, bands=p.bands, output_path = p.path)
+GenFiles = GenerateFiles(dataset = p.dataset, output_path = p.path)
 MData = MakeData(dataset = p.dataset, bands=p.bands, planck_path=p.planck_path, milca_path=p.milca_path, disk_radius= p.disk_radius, output_path = p.path)
-CNN = CNNSegmentation(model = p.model, dataset = p.dataset, bands=p.bands, planck_path=p.planck_path, milca_path=p.milca_path, epochs=p.epochs, batch=p.batch, 
-                       lr=p.lr, patience=p.patience, loss=p.loss, optimizer=p.optimizer, disk_radius=p.disk_radius, output_path = p.path)
+CNN = CNNSegmentation(model = p.model, range_comp=p.range_compression, dataset = p.dataset, bands=p.bands, planck_path=p.planck_path, milca_path=p.milca_path, epochs=p.epochs, batch=p.batch, 
+                       lr=p.lr, patience=p.patience, loss=p.loss, optimizer=p.optimizer, loops=p.loops, disk_radius=p.disk_radius, output_path = p.path)
 
 if args.make_directories == True:
 

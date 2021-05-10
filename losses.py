@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-@author: Xavier Jimenez
-Functions implemented in https://github.com/mlyg/mixed-focal-loss/
+Part of these functions are implemented in https://github.com/mlyg/mixed-focal-loss/
 """
 
 from tensorflow.keras.losses import binary_crossentropy
@@ -140,7 +139,7 @@ def tversky_loss(y_true, y_pred):
     smooth: smoothing constant to prevent division by zero errors
     """
     delta = 0.9
-    smooth = 0.000001
+    smooth = 1
     axis = identify_axis(y_true.get_shape())
     # Calculate true positives (tp), false negatives (fn) and false positives (fp)   
     tp = K.sum(y_true * y_pred, axis=axis)

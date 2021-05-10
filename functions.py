@@ -13,13 +13,13 @@ Created on Thu Apr 01 10:00:58 2021
 import numpy as np
 import pandas as pd
 import os
-import shutil
 import time
 import glob
 from joblib import Parallel, delayed
 from scipy import ndimage
 import losses
 import models
+from generate_files import GenerateFiles
 
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -52,7 +52,7 @@ from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLRO
 from tensorflow.keras.losses import binary_crossentropy
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop
 import tensorflow.keras.backend as K
-
+from keras_unet_collection import models as tf_models
 
 from sklearn.model_selection import train_test_split
 
@@ -71,127 +71,6 @@ mpl_logger.setLevel(logging.WARNING)
 #------------------------------------------------------------------#
 # # # # # Functions # # # # #
 #------------------------------------------------------------------#
-
-
-class GenerateFiles(object):
-    """[summary]
-    """
-
-    def __init__(self, dataset, bands, output_path=None):
-        """[summary]
-
-        Args:
-            dataset ([type]): [description]
-            bands ([type]): [description]
-            output_path ([type], optional): [description]. Defaults to None.
-        """
-
-        self.path = os.getcwd() +'/'
-        self.dataset = dataset # 'planck_z', 'planck_z_no-z', 'MCXC', 'RM30', 'RM50'
-        self.bands = bands
-        self.temp_path = self.path + 'to_clean/'
-        self.output_name = time.strftime("/%Y-%m-%d")
-        if output_path is None:
-            self.output_path = self.path
-        else:
-            self.output_path = output_path
-
-
-    def make_directory(self, path_to_file):
-        """[summary]
-
-        Args:
-            filename ([type]): [description]
-        """
-
-        try:
-            os.mkdir(path_to_file)
-        except OSError:
-            pass
-        else:
-            print ("Successfully created the directory %s " % path_to_file)
-
-
-    def make_directories(self, output=False, replace=False):
-        """[summary]
-        """
-
-        if output == False:
-            self.make_directory(self.temp_path)
-
-        elif output == True:
-            self.make_directory(self.output_path + 'output/')
-            self.make_directory(self.output_path + 'tf_saves/')
-            self.make_directory(self.output_path + 'catalogs/')
-            self.make_directory(self.output_path + 'datasets/')
-            self.make_directory(self.output_path + 'datasets/'+ self.dataset)
-            self.make_directory(self.output_path + 'healpix/')
-            self.make_directory(self.output_path + 'healpix/figures/')
-            self.make_directory(self.output_path + 'healpix/figures/PSZ2')
-            if replace == True:
-                last_dir = '/' + os.listdir(self.output_path + 'output/' + self.dataset)[-1]
-                if last_dir != self.output_name:
-                    os.rename(self.output_path + 'output/' + self.dataset + last_dir, self.output_path + 'output/' + self.dataset + self.output_name)
-                else:
-                    self.make_directory(self.output_path + 'output/' + self.dataset)
-            self.make_directory(self.output_path + 'output/' + self.dataset + self.output_name)
-            self.make_directory(self.output_path + 'output/' + self.dataset + self.output_name + '/files')
-            self.make_directory(self.output_path + 'output/' + self.dataset + self.output_name + '/figures')
-
-
-
-    def remove_files_from_directory(self, folder):
-        """Removes files for a given directory
-
-        Args:
-            folder ([str]): directory path
-        """
-
-        for file_name in os.listdir(folder):
-            file_path = os.path.join(folder, file_name)
-            try:
-                if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-            except Exception as e:
-                print('Failed to delete %s. Reason: %s' % (file_path, e))
-
-
-    def clean_temp_directories(self):
-        """[summary]
-        """
-
-        if os.path.exists(self.temp_path) and os.path.isdir(self.temp_path):
-            if not os.listdir(self.temp_path):
-                print("Directory %s is empty"%(self.temp_path))
-            else:
-                self.remove_files_from_directory(self.temp_path)
-                print("Successfully removed the directory %s " % (self.temp_path))
-        else:
-            print("Directory %s does not exist"%(self.temp_path))
-
-
-    def is_directory_empty(self, path_to_dir):
-        """Checks if given directory is empty or not.
-
-        Args:
-            path_to_dir ([str]): path to the directory
-
-        Returns:
-            [bool]: True if directory is empty, False if not.
-        """
-
-        if os.path.exists(path_to_dir) and os.path.isdir(path_to_dir):
-            if not os.listdir(path_to_dir):
-                print("Directory %s is empty"%path_to_dir)
-                return True
-            else:
-                print("Directory %s is not empty"%path_to_dir)
-                return False
-        else:
-            print("Directory %s don't exists"%path_to_dir)
-
 
 class MakeData(object):
 
@@ -614,13 +493,13 @@ class MakeData(object):
 
         assert len(coords) == len(dataset_type)
 
-        GenerateFiles.make_directory(self, path_to_file = self.output_path + 'files/' + 'f%s'%(self.freq))
-        np.savez_compressed(self.output_path + 'files/f%s/'%self.freq + 'milca_n%s_f%s_'%(p, self.freq) + self.dataset, milca)
-        np.savez_compressed(self.output_path + 'files/f%s/'%self.freq + 'type_n%s_f%s_'%(p, self.freq) + self.dataset, np.array(dataset_type))
+        GenerateFiles.make_directory(self, path_to_file = self.output_path + 'files/' + 'f%s_d%s'%(self.freq, self.disk_radius))
+        np.savez_compressed(self.output_path + 'files/f%s_d%s/'%(self.freq, self.disk_radius) + 'milca_n%s_f%s_'%(p, self.freq) + self.dataset, milca)
+        np.savez_compressed(self.output_path + 'files/f%s_d%s/'%(self.freq, self.disk_radius) + 'type_n%s_f%s_'%(p, self.freq) + self.dataset, np.array(dataset_type))
         if p == 0:
             np.savez_compressed(self.dataset_path + 'type_test_f%s_'%(self.freq) + self.dataset, np.array(dataset_type))
-        np.savez_compressed(self.output_path + 'files/f%s/'%self.freq + 'input_n%s_f%s_'%(p, self.freq) + self.dataset, inputs)
-        np.savez_compressed(self.output_path + 'files/f%s/'%self.freq + 'label_n%s_f%s_'%(p, self.freq) + self.dataset, labels)
+        np.savez_compressed(self.output_path + 'files/f%s_d%s/'%(self.freq, self.disk_radius) + 'input_n%s_f%s_'%(p, self.freq) + self.dataset, inputs)
+        np.savez_compressed(self.output_path + 'files/f%s_d%s/'%(self.freq, self.disk_radius) + 'label_n%s_f%s_'%(p, self.freq) + self.dataset, labels)
 
 
     def train_data_generator(self, loops, n_jobs = 1, plot=True):
@@ -631,12 +510,12 @@ class MakeData(object):
 
         Parallel(n_jobs=n_jobs)(delayed(self.create_input)(p, plot=plot) for p in tqdm(range(loops)))
 
-        all_type = glob.glob(os.path.join(self.output_path + 'files/f%s/'%self.freq, "type_n*.npz"))
+        all_type = glob.glob(os.path.join(self.output_path + 'files/f%s_d%s/'%(self.freq, self.disk_radius), "type_n*.npz"))
         X = []
         for f in all_type:
             X.append(np.load(f)['arr_0'])
         dataset_type = np.concatenate(X, axis=0)
-        np.savez_compressed(self.dataset_path + 'type_f%s_'%(self.freq) + self.dataset, dataset_type)
+        np.savez_compressed(self.dataset_path + 'type_f%s_d%s'%(self.freq, self.disk_radius) + self.dataset, dataset_type)
 
         if plot == True:
             counts = Counter(dataset_type)
@@ -644,26 +523,26 @@ class MakeData(object):
             ax = df.plot(kind='bar')
             ax.figure.savefig(self.output_path + 'figures/' + 'dataset_type_density' + '.png', bbox_inches='tight', transparent=False)
 
-        all_type = glob.glob(os.path.join(self.output_path + 'files/f%s/'%self.freq, "input_n*.npz"))
+        all_type = glob.glob(os.path.join(self.output_path + 'files/f%s_d%s/'%(self.freq, self.disk_radius), "input_n*.npz"))
         X = []
         for f in all_type:
             X.append(np.load(f)['arr_0'])
         inputs = np.concatenate(X, axis=0)
-        np.savez_compressed(self.dataset_path + 'input_f%s_'%(self.freq) + self.dataset, inputs)
+        np.savez_compressed(self.dataset_path + 'input_f%s_d%s'%(self.freq, self.disk_radius) + self.dataset, inputs)
 
-        all_type = glob.glob(os.path.join(self.output_path + 'files/f%s/'%self.freq, "label_n*.npz"))
+        all_type = glob.glob(os.path.join(self.output_path + 'files/f%s_d%s/'%(self.freq, self.disk_radius), "label_n*.npz"))
         X = []
         for f in all_type:
             X.append(np.load(f)['arr_0'])
         labels = np.concatenate(X, axis=0)
-        np.savez_compressed(self.dataset_path + 'label_f%s_'%(self.freq) + self.dataset, labels)
+        np.savez_compressed(self.dataset_path + 'label_f%s_d%s'%(self.freq, self.disk_radius) + self.dataset, labels)
         
-        all_type = glob.glob(os.path.join(self.output_path + 'files/f%s/'%self.freq, "milca_n*.npz"))
+        all_type = glob.glob(os.path.join(self.output_path + 'files/f%s_d%s/'%(self.freq, self.disk_radius), "milca_n*.npz"))
         X = []
         for f in all_type:
             X.append(np.load(f)['arr_0'])
         milca = np.concatenate(X, axis=0)
-        np.savez_compressed(self.dataset_path + 'milca_f%s_'%(self.freq) + self.dataset, milca)
+        np.savez_compressed(self.dataset_path + 'milca_f%s_d%s'%(self.freq, self.disk_radius) + self.dataset, milca)
 
     def fit_gaussian_up_to_mode(self, dataset, index, slice='train', plot=True):
         from scipy.optimize import leastsq
@@ -788,14 +667,14 @@ class MakeData(object):
 
         
     def preprocess(self, leastsq=False, range_comp=True, plot=True):
-        inputs_train = np.load(self.dataset_path + 'input_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
-        labels_train = np.load(self.dataset_path + 'label_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
-        dataset_type_train = np.load(self.dataset_path + 'type_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
+        inputs_train = np.load(self.dataset_path + 'input_f%s_d%s'%(self.freq, self.disk_radius) + self.dataset + '.npz')['arr_0']
+        labels_train = np.load(self.dataset_path + 'label_f%s_d%s'%(self.freq, self.disk_radius) + self.dataset + '.npz')['arr_0']
+        dataset_type_train = np.load(self.dataset_path + 'type_f%s_d%s'%(self.freq, self.disk_radius) + self.dataset + '.npz')['arr_0']
 
-        inputs_test = np.load(self.output_path + 'files/f%s/'%self.freq + 'input_n0_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
-        labels_test = np.load(self.output_path + 'files/f%s/'%self.freq + 'label_n0_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
-        dataset_type_test = np.load(self.output_path + 'files/f%s/'%self.freq + 'type_n0_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
-        milca_test = np.load(self.output_path + 'files/f%s/'%self.freq + 'milca_n0_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
+        inputs_test = np.load(self.output_path + 'files/f%s_d%s/'%(self.freq, self.disk_radius) + 'input_n0_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
+        labels_test = np.load(self.output_path + 'files/f%s_d%s/'%(self.freq, self.disk_radius) + 'label_n0_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
+        dataset_type_test = np.load(self.output_path + 'files/f%s_d%s/'%(self.freq, self.disk_radius) + 'type_n0_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
+        milca_test = np.load(self.output_path + 'files/f%s_d%s/'%(self.freq, self.disk_radius) + 'milca_n0_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
 
         X_train, X_val, X_test, output_train, output_val, output_test, M_test = self.train_val_test_split(inputs_train, labels_train, dataset_type_train, inputs_test, labels_test, dataset_type_test, milca_test)
 
@@ -842,9 +721,9 @@ class MakeData(object):
             np.savez_compressed(self.dataset_path + 'input_test_pre_f%s_'%self.freq + self.dataset, input_test)
 
         else:
-            np.savez_compressed(self.dataset_path + 'input_train_pre_f%s_'%self.freq + self.dataset, X_train)
-            np.savez_compressed(self.dataset_path + 'input_val_pre_f%s_'%self.freq + self.dataset, X_val)
-            np.savez_compressed(self.dataset_path + 'input_test_pre_f%s_'%self.freq + self.dataset, X_test)
+            np.savez_compressed(self.dataset_path + 'input_train_pre_f%s_r0_'%self.freq + self.dataset, X_train)
+            np.savez_compressed(self.dataset_path + 'input_val_pre_f%s_r0_'%self.freq + self.dataset, X_val)
+            np.savez_compressed(self.dataset_path + 'input_test_pre_f%s_r0_'%self.freq + self.dataset, X_test)
 
 
         if plot == True:
@@ -906,26 +785,29 @@ class MakeData(object):
             plt.show()
             plt.close()
 
-        all_files = glob.glob(os.path.join(self.output_path + "files/f%s/"%self.freq + "*.npz"))
+        all_files = glob.glob(os.path.join(self.output_path + "files/f%s_d%s/"%(self.freq, self.disk_radius) + "*.npz"))
         for f in all_files:
             os.remove(f)
-        os.rmdir(self.output_path + "files/f%s"%self.freq)
-        os.remove(self.dataset_path + 'input_f%s_'%self.freq + self.dataset + '.npz')
-        os.remove(self.dataset_path + 'label_f%s_'%self.freq + self.dataset + '.npz')
-        os.remove(self.dataset_path + 'type_f%s_'%self.freq + self.dataset + '.npz')
+        os.rmdir(self.output_path + "files/f%s_d%s/"%(self.freq, self.disk_radius))
+        os.remove(self.dataset_path + 'input_f%s_d%s'%(self.freq, self.disk_radius) + self.dataset + '.npz')
+        os.remove(self.dataset_path + 'label_f%s_d%s'%(self.freq, self.disk_radius) + self.dataset + '.npz')
+        os.remove(self.dataset_path + 'type_f%s_d%s'%(self.freq, self.disk_radius) + self.dataset + '.npz')
+        os.remove(self.dataset_path + 'milca_f%s_d%s'%(self.freq, self.disk_radius) + self.dataset + '.npz')
         
 
         print('[preprocessing] Done!')
 
 
 class CNNSegmentation(object):
-    def __init__(self, model, dataset, bands, planck_path, milca_path, epochs, batch, lr, patience, loss, optimizer, size=64, disk_radius = None, drop_out=False, output_path = None):
-        
+
+    def __init__(self, model, range_comp, dataset, bands, planck_path, milca_path, epochs, batch, lr, patience, loss, optimizer, loops, size=64, disk_radius = None, drop_out=False, output_path = None):
         self.path = os.getcwd() + '/'
         self.dataset = dataset # 'planck_z', 'planck_z_no-z', 'MCXC', 'RM30', 'RM50'
         self.bands = bands # '100GHz','143GHz','217GHz','353GHz','545GHz','857GHz', 'y-map'
+        self.range_comp = range_comp
         maps = []
         self.freq = 0
+        self.loops = loops
         if '100GHz' in  bands:
             maps.append((planck_path + "HFI_SkyMap_100-field-IQU_2048_R3.00_full.fits", {'legend': 'HFI 100', 'docontour': True}))
             self.freq += 2
@@ -973,31 +855,71 @@ class CNNSegmentation(object):
         self.batch = batch
         self.lr = lr 
         self.patience = patience
-        self.pmax=0.5
+        self.pmax=0.9
         self.dmin=3
-        self.dmax=20
+        self.dmax=15
 
         self.output_name = 'e%s_b%s_lr%s_p%s_d%s'%(epochs, batch, lr, patience, disk_radius)
 
         optimizers_dict = {'sgd': SGD(lr=self.lr, momentum=0.9), 'adam': Adam(learning_rate=self.lr)}
         self.optimizer =  optimizers_dict[optimizer]
         self.optimizer_name =  optimizer
-        losses_dict = {'binary_crossentropy': 'binary_crossentropy', 'tversky_loss': losses.tversky_loss, 'focal_tversky_loss': losses.focal_tversky_loss(gamma=0.75), 'dice_loss': losses.dice_loss, 
+        losses_dict = {'binary_crossentropy': 'binary_crossentropy', 'weighted_binary_crossentropy': 'binary_crossentropy', 'tversky_loss': losses.tversky_loss, 'focal_tversky_loss': losses.focal_tversky_loss(gamma=0.75), 'dice_loss': losses.dice_loss, 
                        'combo_loss': losses.combo_loss(alpha=0.5,beta=0.5), 'cosine_tversky_loss': losses.cosine_tversky_loss(gamma=1), 'focal_dice_loss': losses.focal_dice_loss(delta=0.7, gamma_fd=0.75), 
                        'focal_loss': losses.focal_loss(alpha=None, beta=None, gamma_f=2.), 'mixed_focal_loss': losses.mixed_focal_loss(weight=None, alpha=None, beta=None, delta=0.7, gamma_f=2.,gamma_fd=0.75)}
         self.loss = losses_dict[loss]
         self.loss_name = loss
-        model_dict = {'unet': models.unet, 'attn_unet': models.attn_unet, 'attn_reg_ds': models.attn_reg_ds, 'attn_reg': models.attn_reg}
+        input_size = (self.npix, self.npix, len(self.bands))
+        filter_num = [64, 128, 256, 512]#, 1024]
+        n_labels = 1
+        dilation_num = [1, 3, 15, 31]
+        filter_num_down = [64, 128, 256, 512]#, 1024]
+
+        #               'vnet': tf_models.vnet_2d(input_size, filter_num, n_labels, res_num_ini=1, res_num_max=3, 
+        #                     activation='ReLU', output_activation='Softmax', batch_norm=False, pool=True, unpool=True, name='vnet'),
+
+
+        model_dict={'unet': models.unet, 
+                    'attn_unet': tf_models.att_unet_2d(input_size, filter_num, n_labels, stack_num_down=2, stack_num_up=2, 
+                            activation='ReLU', atten_activation='ReLU', attention='add', output_activation='Sigmoid', 
+                            batch_norm=True, weights=None, pool=False, unpool=False, freeze_batch_norm=True, name='attunet'),
+                    'r2u_net': tf_models.r2_unet_2d(input_size, filter_num, n_labels, 
+                            stack_num_down=2, stack_num_up=2, recur_num=2,
+                            activation='ReLU', output_activation='Softmax', 
+                            batch_norm=False, pool=True, unpool=True, name='r2_unet'),
+                    'unet_plus': tf_models.unet_plus_2d(input_size, filter_num, n_labels, stack_num_down=2, stack_num_up=2,
+                            activation='ReLU', output_activation='Softmax', batch_norm=False, pool=True, unpool=True, deep_supervision=False, 
+                            backbone=None, weights=None, freeze_backbone=True, freeze_batch_norm=True, name='xnet'),
+                    'resunet_a': tf_models.resunet_a_2d(input_size, filter_num, dilation_num, n_labels,
+                            aspp_num_down=256, aspp_num_up=128, activation='ReLU', output_activation='Softmax', 
+                            batch_norm=True, pool=True, unpool=True, name='resunet'),
+                    'u2net': tf_models.u2net_2d(input_size, n_labels, filter_num_down, filter_num_up='auto', filter_mid_num_down='auto', filter_mid_num_up='auto', 
+                            filter_4f_num='auto', filter_4f_mid_num='auto', activation='ReLU', output_activation='Sigmoid', 
+                            batch_norm=False, pool=True, unpool=True, deep_supervision=False, name='u2net'),
+                    'unet_3plus': tf_models.unet_3plus_2d(input_size, n_labels, filter_num_down, filter_num_skip='auto', filter_num_aggregate='auto', 
+                            stack_num_down=2, stack_num_up=1, activation='ReLU', output_activation='Sigmoid',
+                            batch_norm=False, pool=True, unpool=True, deep_supervision=False, 
+                            backbone=None, weights=None, freeze_backbone=True, freeze_batch_norm=True, name='unet3plus')}
+
         self.model = model_dict[model]
         self.model_name = model
 
     def npy_to_tfdata(self, batch_size=20, buffer_size=1000, input_train=None, input_val=None, input_test=None, output_train=None, output_val=None, output_test=None):
         if input_train is None:
-            input_train = np.load(self.dataset_path + 'input_train_pre_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
+            if self.range_comp:
+                input_train = np.load(self.dataset_path + 'input_train_pre_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
+            else:
+                input_train = np.load(self.dataset_path + 'input_train_pre_f%s_r0_'%self.freq + self.dataset + '.npz')['arr_0']
         if input_val is None:
-            input_val = np.load(self.dataset_path + 'input_val_pre_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
+            if self.range_comp:
+                input_val = np.load(self.dataset_path + 'input_val_pre_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
+            else:
+                input_val = np.load(self.dataset_path + 'input_val_pre_f%s_r0_'%self.freq + self.dataset + '.npz')['arr_0']
         if input_test is None:
-            input_test = np.load(self.dataset_path + 'input_test_pre_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
+            if self.range_comp:
+                input_test = np.load(self.dataset_path + 'input_test_pre_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
+            else:
+                input_test = np.load(self.dataset_path + 'input_test_pre_f%s_r0_'%self.freq + self.dataset + '.npz')['arr_0']
         if output_train is None:
             output_train = np.load(self.dataset_path + 'label_train_pre_f%s_d%s_'%(self.freq, self.disk_radius) + self.dataset + '.npz')['arr_0']
         if output_val is None:
@@ -1011,49 +933,76 @@ class CNNSegmentation(object):
         test_dataset = tf.data.Dataset.from_tensor_slices((input_test, output_test))
 
         train_dataset = train_dataset.shuffle(buffer_size).batch(batch_size).repeat()
+        train_dataset = train_dataset.prefetch(buffer_size=tf.data.AUTOTUNE)
         val_dataset = val_dataset.shuffle(buffer_size).batch(batch_size).repeat()
+        val_dataset = val_dataset.prefetch(buffer_size=tf.data.AUTOTUNE)
         test_dataset = test_dataset.batch(batch_size)
 
 
         return train_dataset, val_dataset, test_dataset
 
+    def prepare(self, ds, shuffle=False, augment=False):
+        AUTOTUNE = tf.data.AUTOTUNE
+        data_augmentation = tf.keras.Sequential([
+            tf.keras.layers.experimental.preprocessing.RandomFlip("horizontal_and_vertical"),
+            tf.keras.layers.experimental.preprocessing.RandomRotation(0.2)
+            ])
+
+        if shuffle:
+            ds = ds.shuffle(1000)
+
+        # Batch all datasets
+        ds = ds.batch(self.batch)
+
+        # Use data augmentation only on the training set
+        if augment:
+            ds = ds.map(lambda x, y: (data_augmentation(x, training=True), y), 
+                        num_parallel_calls=AUTOTUNE)
+
+        # Use buffered prefecting on all datasets
+        return ds.prefetch(buffer_size=AUTOTUNE)
+
     def train_model(self):
-        from keras_unet_collection import models
         input_train = np.load(self.dataset_path + 'input_train_pre_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
         input_val = np.load(self.dataset_path + 'input_val_pre_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
-        train_dataset, valid_dataset, test_dataset = self.npy_to_tfdata(batch_size=self.batch, buffer_size=1000)
+        train_dataset, valid_dataset, _ = self.npy_to_tfdata(batch_size=self.batch, buffer_size=1000)
 
         callbacks = [
-            ModelCheckpoint(self.path + "tf_saves/" + self.dataset + "/model_%s_l%s_o%s_f%s_"%(self.model_name, self.loss_name, self.optimizer_name, self.freq) + self.output_name + ".h5", save_best_only=True),
+            ModelCheckpoint(monitor='val_loss', filepath=self.path + "tf_saves/" + self.dataset + "/model_%s_%s_%s_f%s_"%(self.model_name, self.loss_name, self.optimizer_name, self.freq) + self.output_name + ".h5", save_best_only=True),
             ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=self.patience),
-            CSVLogger(self.path + "tf_saves/" + self.dataset + "/data_%s_l%s_o%s_f%s_"%(self.model_name, self.loss_name, self.optimizer_name, self.freq) + self.output_name + ".csv"),
+            CSVLogger(self.path + "tf_saves/" + self.dataset + "/data_%s_%s_%s_f%s_"%(self.model_name, self.loss_name, self.optimizer_name, self.freq) + self.output_name + ".csv"),
             TensorBoard(),
             EarlyStopping(monitor='val_loss', patience=self.patience, restore_best_weights=True)
         ]
 
 
-        input_size = (self.npix, self.npix, len(self.bands))
-        model = models.att_unet_2d(input_size, filter_num=[64, 128, 256, 512, 1024], n_labels=2, 
-                           stack_num_down=2, stack_num_up=2, activation='ReLU', 
-                           atten_activation='ReLU', attention='add', output_activation='Sigmoid', 
-                           batch_norm=True, pool=False, unpool=False, freeze_batch_norm=True, 
-                           name='attunet')
+        if self.model_name == 'unet':
+            input_size = (self.npix, self.npix, len(self.bands))
+            model = self.model(self.optimizer, input_size, self.loss)
+        else:
+            model  =self.model
+            metrics = [losses.dsc, tf.keras.metrics.Recall(), tf.keras.metrics.Precision()]#, losses.iou]
+            model.compile(loss=self.loss, optimizer=self.optimizer, metrics=metrics) #tf.keras.losses.categorical_crossentropy
 
-        metrics = [losses.dsc, tf.keras.metrics.Recall(), tf.keras.metrics.Precision(), losses.iou]
-        model.compile(loss=self.loss, optimizer=self.optimizer, metrics=metrics) #tf.keras.losses.categorical_crossentropy
-
-        # model = self.model(self.optimizer, input_size, self.loss)
-
-        model_history = model.fit(train_dataset,
-            validation_data=valid_dataset,
-            epochs=self.epochs,
-            steps_per_epoch = len(input_train)/self.batch,
-            validation_steps= len(input_val)//self.batch//5,
-            callbacks=callbacks)
+        
+        if self.loss_name == 'weighted_binary_crossentropy':
+            model_history = model.fit(train_dataset.map(self.add_sample_weights),
+                validation_data=valid_dataset,
+                epochs=self.epochs,
+                steps_per_epoch = int(len(input_train)/(self.batch)),
+                validation_steps= int(len(input_val)//(self.batch)),
+                callbacks=callbacks)
+        else:
+            model_history = model.fit(train_dataset,
+                validation_data=valid_dataset,
+                epochs=self.epochs,
+                steps_per_epoch = int(len(input_train)/(self.batch)),
+                validation_steps= int(len(input_val)//(self.batch)),
+                callbacks=callbacks)
 
     def pixel_neighbours(self, im, center, p, pmax, dmax):
 
-        rows, cols, _ = np.shape(im)
+        rows, cols = np.shape(im)
 
         i, j = p[0], p[1]
 
@@ -1200,7 +1149,11 @@ class CNNSegmentation(object):
                                  - len(df_planck_z_detections)-len(df_planck_no_z_detections)-len(df_MCXC_detections)-len(df_RM50_detections)-len(df_RM30_detections), 
                                  len(df_detections)-len(df_planck_z_detections)-len(df_planck_no_z_detections)-len(df_MCXC_detections)-len(df_RM50_detections)-len(df_RM30_detections)))
 
-        file = open(self.output_path + 'figures/' + 'prediction_%s_l%s_o%s_f%s_'%(self.model_name, self.loss_name, self.optimizer_name, self.freq) + self.output_name + "/results.txt","w")
+        try:
+            file = open(self.output_path + 'figures/' + 'prediction_%s_%s_%s_f%s_'%(self.model_name, self.loss_name, self.optimizer_name, self.freq) + self.output_name + "/results.txt","w")
+        except:
+            file = open(self.output_path + 'figures/' + 'prediction_%s_l%s_o%s_f%s_'%(self.model_name, self.loss_name, self.optimizer_name, self.freq) + self.output_name + "/results.txt","w")
+        
         L = ['duplicate detections (total): %s'%(len(df_duplicates))+ " \n",
              'planck_z: %s(%s)/%s(%s)'%(len(df_planck_z_detections), planck_z_detections_number, npz[0], npz[1])+ " \n", 
              'planck_no-z: %s(%s)/%s(%s)'%(len(df_planck_no_z_detections), planck_no_z_detections_number, npnz[0], npnz[1])+ " \n",
@@ -1263,7 +1216,7 @@ class CNNSegmentation(object):
 
         return len(df_in_patch)
 
-    def remove_duplicates(self, df, tol=3):
+    def remove_duplicates(self, df, tol=4):
         coords = SkyCoord(ra=df['RA'].values, dec=df['DEC'].values, unit='deg')
         _, d2d, _ = match_coordinates_sky(coords, coords, nthneighbor=2)
         isdup = d2d < tol*u.arcmin
@@ -1273,7 +1226,7 @@ class CNNSegmentation(object):
 
         return df
 
-    def return_dup_coords(self, df_detections, tol=3, plot=True):
+    def return_dup_coords(self, df_detections, tol=4, plot=True):
 
         ID = np.arange(0, len(df_detections))
         df_detections_copy = df_detections[['RA', 'DEC']].copy()
@@ -1302,7 +1255,7 @@ class CNNSegmentation(object):
             ax.hist(np.array(df_d2d['d2d'].values)*60)
             ax.axvline(tol, color='k', linestyle='--')
             ax.set_xlim(0, 2*tol)
-            plt.savefig(self.output_path + 'figures/' + 'd2d_detections_duplicates_' + self.dataset + '.png', bbox_inches='tight', transparent=False)
+            plt.savefig(self.output_path + 'figures/prediction_%s_%s_%s_f%s_%s/'%(self.model_name, self.loss_name, self.optimizer_name, self.freq, self.output_name) + 'd2d_detections_duplicates_' + self.dataset + '.png', bbox_inches='tight', transparent=False)
             plt.show()
             plt.close()
 
@@ -1381,7 +1334,7 @@ class CNNSegmentation(object):
             ax.hist(np.array(df_d2d['d2d'].values)*60)
             ax.axvline(tol, color='k', linestyle='--')
             ax.set_xlim(0, 2*tol)
-            plt.savefig(self.output_path + 'figures/' + 'd2d_detections_%s'%output_name + '.png', bbox_inches='tight', transparent=False)
+            plt.savefig(self.output_path + 'figures/prediction_%s_%s_%s_f%s_%s/'%(self.model_name, self.loss_name, self.optimizer_name, self.freq, self.output_name) + 'd2d_detections_%s'%output_name + '.png', bbox_inches='tight', transparent=False)
             plt.show()
             plt.close()
 
@@ -1392,26 +1345,30 @@ class CNNSegmentation(object):
         df_common = pd.merge(df_main, df_catalog, indicator=True, on='ID', how='outer').query('_merge=="both"').drop('_merge', axis=1)
 
         df_common.query("ismatched == True", inplace=True)
-        df_common.drop(columns=['ismatched', 'ID'], inplace=True)
 
         size = len(df_common)
         if len(df_common) != 0 and len(df_common) != 1:
             df_common = self.remove_duplicates(df_common)
+        df_common = df_common.drop_duplicates(subset='ID', keep="first")
+        df_common.drop(columns=['ismatched', 'ID'], inplace=True)
 
         return df_common, size
         
 
 
     def evaluate_prediction(self, plot=True, plot_patch=True):
-        train_dataset, valid_dataset, test_dataset = self.npy_to_tfdata(batch_size=self.batch, buffer_size=1000)
+        _, _, test_dataset = self.npy_to_tfdata(batch_size=self.batch, buffer_size=1000)
 
         from tensorflow.keras.utils import CustomObjectScope
 
         with CustomObjectScope({'iou': losses.iou, 'f1': losses.f1, 'dsc': losses.dsc, self.loss_name: self.loss, 'loss_function': self.loss}):
-            model = tf.keras.models.load_model(self.path + "tf_saves/" + self.dataset + "/model_%s_l%s_o%s_f%s_"%(self.model_name, self.loss_name, self.optimizer_name, self.freq) + self.output_name + ".h5")
+            try:
+                model = tf.keras.models.load_model(self.path + "tf_saves/" + self.dataset + "/model_%s_%s_%s_f%s_"%(self.model_name, self.loss_name, self.optimizer_name, self.freq) + self.output_name + ".h5")
+            except:
+                model = tf.keras.models.load_model(self.path + "tf_saves/" + self.dataset + "/model_%s_l%s_o%s_f%s_"%(self.model_name, self.loss_name, self.optimizer_name, self.freq) + self.output_name + ".h5")
 
         if plot == True:
-            GenerateFiles.make_directory(self, path_to_file = self.output_path + 'figures/' + 'prediction_%s_l%s_o%s_f%s_'%(self.model_name, self.loss_name, self.optimizer_name, self.freq) + self.output_name)
+            GenerateFiles.make_directory(self, path_to_file = self.output_path + 'figures/' + 'prediction_%s_%s_%s_f%s_'%(self.model_name, self.loss_name, self.optimizer_name, self.freq) + self.output_name)
             for metric in ['dsc', 'precision', 'recall', 'loss', 'lr']:#['f1', 'acc', 'iou', 'precision', 'recall', 'loss', 'lr']:
                 self.plot_metric(metric)
             pixel_coords = self.show_predictions(model, dataset = test_dataset, num=30, plot=plot_patch)
@@ -1426,7 +1383,10 @@ class CNNSegmentation(object):
 
     def load_predictions(self):
         pixel_coords = []
-        pred_mask = np.load(self.dataset_path + 'prediction_mask_%s_l%s_o%s_f%s_%s'%(self.model_name, self.loss_name, self.optimizer_name, self.freq, self.output_name) + '.npy')
+        try:
+            pred_mask = np.load(self.dataset_path + 'prediction_mask_%s_%s_%s_f%s_%s'%(self.model_name, self.loss_name, self.optimizer_name, self.freq, self.output_name) + '.npy')
+        except:
+            pred_mask = np.load(self.dataset_path + 'prediction_mask_%s_l%s_o%s_f%s_%s'%(self.model_name, self.loss_name, self.optimizer_name, self.freq, self.output_name) + '.npy')
 
         for k in range(len(pred_mask)):
             coords_in_patch = []
@@ -1451,7 +1411,7 @@ class CNNSegmentation(object):
                 predicted_masks[self.batch*n+k,:,:,0] = pred_mask[k,:,:,0]
             n += 1
 
-        np.save(self.dataset_path + 'prediction_mask_%s_l%s_o%s_f%s_%s'%(self.model_name, self.loss_name, self.optimizer_name, self.freq, self.output_name) , predicted_masks)
+        np.save(self.dataset_path + 'prediction_mask_%s_%s_%s_f%s_%s'%(self.model_name, self.loss_name, self.optimizer_name, self.freq, self.output_name) , predicted_masks)
 
     def show_predictions(self, model, dataset, num=1, plot=True):
         milca_test = np.load(self.dataset_path + 'milca_test_pre_f%s_'%self.freq + self.dataset + '.npz')['arr_0']
@@ -1483,44 +1443,44 @@ class CNNSegmentation(object):
                                 
                     plt.subplot(1, 4, 3)
                     plt.title(title[2])
-                    plt.imshow(pred_mask[k], origin='lower', vmin=0, vmax=1) #, norm=LogNorm(vmin=0.001, vmax=1)
+                    plt.imshow(pred_mask[k,:,:,0], origin='lower', vmin=0, vmax=1) #, norm=LogNorm(vmin=0.001, vmax=1)
                     plt.axis('off')
                     plt.colorbar()
 
                     plt.subplot(1, 4, 4)
                     plt.title(title[3])
-                    mask_list, x_peak_list, y_peak_list = self.detect_clusters(im = pred_mask[k], pmax=self.pmax, dmin=self.dmin, dmax=self.dmax)
+                    mask_list, x_peak_list, y_peak_list = self.detect_clusters(im = pred_mask[k,:,:,0], pmax=self.pmax, dmin=self.dmin, dmax=self.dmax)
                     if mask_list:
                         new_mask = np.zeros_like(pred_mask[k,:,:,0])
                         coords_in_patch = []
                         for i in range(len(mask_list)):
-                            new_mask = new_mask + (np.ones_like(pred_mask[k,:,:,0]) - mask_list[i][:,:,0])
+                            new_mask = new_mask + (np.ones_like(pred_mask[k,:,:,0]) - mask_list[i][:,:])
                             
                             plt.imshow(new_mask, origin='lower')
-                            com = ndimage.measurements.center_of_mass(pred_mask[k]*(np.ones_like(pred_mask[k]) - mask_list[i]))
+                            com = ndimage.measurements.center_of_mass(pred_mask[k,:,:,0]*(np.ones_like(pred_mask[k,:,:,0]) - mask_list[i]))
                             # plt.scatter(x_peak_list[i], y_peak_list[i], color='red')
                             plt.scatter(com[1], com[0], color='blue')
                             coords_in_patch.append(com)
 
                         final_masks[self.batch*n+k,:,:,0] = np.where(new_mask < 0, 0, new_mask)
                     else:
-                        plt.imshow(np.zeros_like(pred_mask[k]), origin='lower')
+                        plt.imshow(np.zeros_like(pred_mask[k,:,:,0]), origin='lower')
                         final_masks[self.batch*n+k,:,:,0] = np.zeros_like(pred_mask[k][:,:,0])
                         coords_in_patch = []
                     pixel_coords.append(coords_in_patch)
                     plt.axis('off')
 
-                    plt.savefig(self.output_path + 'figures/prediction_%s_l%s_o%s_f%s_%s/'%(self.model_name, self.loss_name, self.optimizer_name, self.freq, self.output_name) + 'prediction_%s_%s'%(n, k)  + '.png', bbox_inches='tight', transparent=False)
+                    plt.savefig(self.output_path + 'figures/prediction_%s_%s_%s_f%s_%s/'%(self.model_name, self.loss_name, self.optimizer_name, self.freq, self.output_name) + 'prediction_%s_%s'%(n, k)  + '.png', bbox_inches='tight', transparent=False)
                     plt.show()
                     plt.close()
                 else:
-                    mask_list, x_peak_list, y_peak_list = self.detect_clusters(im = pred_mask[k], pmax=self.pmax, dmin=self.dmin, dmax=self.dmax)
+                    mask_list, x_peak_list, y_peak_list = self.detect_clusters(im = pred_mask[k,:,:,0], pmax=self.pmax, dmin=self.dmin, dmax=self.dmax)
                     if mask_list:
                         new_mask = np.zeros_like(pred_mask[k,:,:,0])
                         coords_in_patch = []
                         for i in range(len(mask_list)):
-                            new_mask = new_mask + (np.ones_like(pred_mask[k,:,:,0]) - mask_list[i][:,:,0])
-                            com = ndimage.measurements.center_of_mass(pred_mask[k]*(np.ones_like(pred_mask[k]) - mask_list[i]))
+                            new_mask = new_mask + (np.ones_like(pred_mask[k,:,:,0]) - mask_list[i][:,:])
+                            com = ndimage.measurements.center_of_mass(pred_mask[k,:,:,0]*(np.ones_like(pred_mask[k,:,:,0]) - mask_list[i]))
                             coords_in_patch.append(com)
                         final_masks[self.batch*n+k,:,:,0] = np.where(new_mask < 0, 0, new_mask)
                     else:
@@ -1529,14 +1489,17 @@ class CNNSegmentation(object):
 
                     pixel_coords.append(coords_in_patch)
             n += 1
-            np.save(self.dataset_path + 'prediction_mask_%s_l%s_o%s_f%s_%s'%(self.model_name, self.loss_name, self.optimizer_name, self.freq, self.output_name) , predicted_masks)
-            np.save(self.dataset_path + 'final_mask_%s_l%s_o%s_f%s_%s'%(self.model_name, self.loss_name, self.optimizer_name, self.freq, self.output_name) , final_masks)
+            np.save(self.dataset_path + 'prediction_mask_%s_%s_%s_f%s_%s'%(self.model_name, self.loss_name, self.optimizer_name, self.freq, self.output_name) , predicted_masks)
+            np.save(self.dataset_path + 'final_mask_%s_%s_%s_f%s_%s'%(self.model_name, self.loss_name, self.optimizer_name, self.freq, self.output_name) , final_masks)
 
         return pixel_coords
 
     def plot_metric(self, metric):
 
-        data = pd.read_csv(self.path + "tf_saves/" + self.dataset + "/data_%s_l%s_o%s_f%s_"%(self.model_name, self.loss_name, self.optimizer_name, self.freq) + "%s.csv"%(self.output_name))
+        try:
+            data = pd.read_csv(self.path + "tf_saves/" + self.dataset + "/data_%s_%s_%s_f%s_"%(self.model_name, self.loss_name, self.optimizer_name, self.freq) + "%s.csv"%(self.output_name))
+        except:
+            data = pd.read_csv(self.path + "tf_saves/" + self.dataset + "/data_%s_l%s_o%s_f%s_"%(self.model_name, self.loss_name, self.optimizer_name, self.freq) + "%s.csv"%(self.output_name))
         
         train = data[metric]
         if metric != 'lr':
@@ -1554,9 +1517,46 @@ class CNNSegmentation(object):
         if metric in ['f1', 'acc', 'iou', 'precision', 'recall', 'precision_1', 'recall_1', 'tp', 'tn', 'dsc']:
             plt.ylim([0, 1])
         plt.legend()
-        plt.savefig(self.output_path + 'figures/prediction_%s_l%s_o%s_f%s_%s/'%(self.model_name, self.loss_name, self.optimizer_name, self.freq, self.output_name) + metric  + '.png', bbox_inches='tight', transparent=False)
+        plt.savefig(self.output_path + 'figures/prediction_%s_%s_%s_f%s_%s/'%(self.model_name, self.loss_name, self.optimizer_name, self.freq, self.output_name) + metric  + '.png', bbox_inches='tight', transparent=False)
         plt.show()
         plt.close()
+
+    def add_sample_weights(self, image, label):
+        # The weights for each class, with the constraint that:
+        #     sum(class_weights) == 1.0
+        class_weights = tf.constant([1.0, 10.0])#self.compute_class_weight()
+        class_weights = class_weights/tf.reduce_sum(class_weights)
+
+        # Create an image of `sample_weights` by using the label at each pixel as an 
+        # index into the `class weights` .
+        sample_weights = tf.gather(class_weights, indices=tf.cast(label, tf.int32))
+
+        return image, label, sample_weights
+
+    def compute_class_weight(self):
+        output_train = np.load(self.dataset_path + 'label_train_pre_f%s_d%s_'%(self.freq, self.disk_radius) + self.dataset + '.npz')['arr_0']
+        counter_1 = 0
+        class_1 = 0
+        class_0 = 0
+        for i in range(len(output_train)):
+            ones = np.sum(output_train[i,:,:,0])
+            zeros = self.npix**2 - ones
+            class_0 += zeros
+            if ones == 0:
+                pass
+            else:
+                counter_1 += 1
+                class_1 += ones
+
+        freq_1 = class_1/(counter_1 * self.npix**2)
+        freq_0 = class_0/(len(output_train) * self.npix**2)
+        median_freq = np.median([freq_0, freq_1])
+
+        weight_0 = median_freq/freq_0
+        weight_1 = median_freq/freq_1
+
+
+        return tf.constant([weight_0, weight_1])
 
     def compute_pos_weight(self):
         output_train = np.load(self.dataset_path + 'label_train_pre_f%s_d%s_'%(self.freq, self.disk_radius) + self.dataset + '.npz')['arr_0']

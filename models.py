@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-@author: Xavier Jimenez
-Functions implemented in https://github.com/nabsabraham/focal-tversky-unet
+Part of these functions are implemented in https://github.com/nabsabraham/focal-tversky-unet
 """
 
 import tensorflow as tf 
