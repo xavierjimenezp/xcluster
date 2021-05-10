@@ -20,9 +20,9 @@ Sky maps are splited with HEALPIX nside=2 into 48 tiles of equal-sized area of 8
 
 ### Input & output dataset
 
-**Training**: Individual patches with size 1.83º x 1.83º  (64 x 64 pixels), and resolution 1.7º, are extracted from the sky maps. These patches contain at least one cluster from the cluster catalog selected in the params file under *dataset*. Multiple patches of the same cluster are extracted with random translations to get and input training set with shape (~ 90,000 x 64 x 64 x ns), where ns is the number of sky-maps used. For each patch, a segmentation image is created where, for each cluster, a circular mask with radius *disk_radius* is created. The output training set input is (~ 90,000 x 64 x 64 x 1).
+**Training**: Individual patches with size 1.83º x 1.83º  (64 x 64 pixels), and resolution 1.7º, are extracted from the sky maps. These patches contain at least one cluster from the cluster catalog selected in the params file under *dataset*. Multiple patches of the same cluster are extracted with random translations to get an input training set with shape (~ 90,000 x 64 x 64 x ns), where ns is the number of sky-maps used. For each patch, a segmentation image is created where, for each cluster, a circular mask with radius *disk_radius* is created. The output training set shape is (~ 90,000 x 64 x 64 x 1).
 
-**Validation**: Same as training. input shape(~ 10,000 x 64 x 64 x ns).
+**Validation**: Same as training but using tiles 10, 26, 39 and 42. Input/output shape(~ 10,000 x 64 x 64 x ns/1).
 
 **Test**: Tile number 7 is entirely splitted into patches to cover the whole HEALPIX. Some patches do not contain any cluster. Segmentation images are created the same way as training and validation.
 
@@ -48,7 +48,7 @@ U-net is a convolutional neural network with an encoder-decoder architecture whi
 |`u2net`|[![Generic badge](https://img.shields.io/badge/U^2_Net-Up-green.svg)](https://shields.io/)| [Qin et al. (2020)](https://arxiv.org/abs/2005.09007) |
 |`unet_3plus`|[![Generic badge](https://img.shields.io/badge/U_Net_3+-Up-green.svg)](https://shields.io/)| [Huang et al. (2020)](https://arxiv.org/abs/2004.08790) |
 
-Tensorflow implementations provided by python package [**`keras_unet_collection`**](https://github.com/yingkaisha/keras-unet-collection).
+Tensorflow implementations (except U-Net) provided by python package [**`keras_unet_collection`**](https://github.com/yingkaisha/keras-unet-collection).
 
 #### Loss function
 
