@@ -73,14 +73,28 @@ mpl_logger.setLevel(logging.WARNING)
 #------------------------------------------------------------------#
 
 class MakeData(object):
+    """Class to create and preprocess input/output files from full sky-maps.
+    """
 
     def __init__(self, dataset, bands, planck_path, milca_path, disk_radius=None, output_path=None):
-        """[summary]
-
+        """
         Args:
-            dataset ([type]): [description]
-            bands ([type]): [description]
-            temp_path ([type]): [description]
+            dataset (str): file name for the cluster catalog that will used.
+                        Options are 'planck_z', 'planck_z_no-z', 'MCXC', 'RM30', 'RM50'.
+            bands (list): list of full sky-maps that will be used for the input file.
+                        Options are 100GHz','143GHz','217GHz','353GHz','545GHz','857GHz', and 'y-map'.
+                        More full sky-maps will be added later on (e.g. CO2, X-ray, density maps).
+            planck_path (str): path to directory containing planck HFI 6 frequency maps.
+                        Files should be named as following
+                        'HFI_SkyMap_100-field-IQU_2048_R3.00_full.fits', 'HFI_SkyMap_143-field-IQU_2048_R3.00_full.fits', 
+                        'HFI_SkyMap_143-field-IQU_2048_R3.00_full.fits', 'HFI_SkyMap_353-psb-field-IQU_2048_R3.00_full.fits', 
+                        'HFI_SkyMap_545-field-Int_2048_R3.00_full.fits', 'HFI_SkyMap_857-field-Int_2048_R3.00_full.fits'.
+            milca_path (str): path to directory containing MILCA full sky map. File should be named 'milca_ymaps.fits'.
+            disk_radius (float, optional): Disk radius that will be used to create segmentation masks for output files. 
+                        Defaults to None.
+            output_path (str, optional): Path to output directory. Output directory needs be created beforehand using 
+                        'python xcluster.py -m True' selecting same output directory in 'params.py'.
+                        If None, xcluster path will be used. Defaults to None.
         """
 
         self.path = os.getcwd() + '/'
@@ -131,6 +145,12 @@ class MakeData(object):
         self.milca_path = milca_path
 
     def plot_psz2_clusters(self, healpix_path):
+        """Saves plots containing patches for planck frequency maps and y-map.
+        Function is deprecated and will be removed in later versions.
+
+        Args:
+            healpix_path (str): output path for plots (deprecated).
+        """
 
         maps = self.maps
 
@@ -168,7 +188,28 @@ class MakeData(object):
                 plt.close()
 
 
-    def create_catalogs(self, plot=True):
+    def create_catalogs(self, plot=False):
+        """Creates the following catalogs using 'PSZ2v1.fits', 'MCXC-Xray-clusters.fits', and 'redmapper_dr8_public_v6.3_catalog.fits'
+            (see V. Bonjean 2018 for more details):
+
+            planck_z (pd.DataFrame): dataframe with the following columns for PSZ2 clusters with known redshift:
+                                    'RA', 'DEC', 'GLON', 'GLAT', 'M500', 'R500', 'Y5R500', 'REDMAPPER', 'MCXC', 'Z'
+            planck_no_z (pd.DataFrame): dataframe with the following columns for PSZ2 clusters with unknown redshift:
+                                    'RA', 'DEC', 'GLON', 'GLAT', 'M500', 'R500', 'Y5R500', 'REDMAPPER', 'MCXC'
+            MCXC_no_planck (pd.DataFrame): dataframe with the following columns for MCXC clusters:
+                                    'RA', 'DEC', 'R500', 'M500', 'Z'
+            RM50_no_planck (pd.DataFrame): dataframe with the following columns for RedMaPPer clusters with lambda>50:
+                                    'RA', 'DEC', 'LAMBDA', 'Z'
+            RM30_no_planck (pd.DataFrame): dataframe with the following columns for RedMaPPer clusters with lambda>30:
+                                    'RA', 'DEC', 'LAMBDA', 'Z'
+
+            Catalogs are saved in output_path + /catalogs/. Input catalogs are in planck_path.
+
+        Args:
+            plot (bool, optional): If True, will save duplicates distance from each other distribution plots. Defaults to False.
+
+        """
+
         PSZ2 = fits.open(self.planck_path + 'PSZ2v1.fits')
         df_psz2 = pd.DataFrame(data={'RA': PSZ2[1].data['RA'].tolist(), 'DEC': PSZ2[1].data['DEC'].tolist(), 'GLON': PSZ2[1].data['GLON'].tolist(), 'GLAT':PSZ2[1].data['GLAT'].tolist(),
             'M500': PSZ2[1].data['MSZ'].tolist(), 'R500': PSZ2[1].data['Y5R500'].tolist(), 'REDMAPPER': PSZ2[1].data['REDMAPPER'].tolist(), 'MCXC': PSZ2[1].data['MCXC'].tolist(),
@@ -192,17 +233,22 @@ class MakeData(object):
         df_REDMAPPER_30 = df_REDMAPPER.query("LAMBDA > 30")
         df_REDMAPPER_50 = df_REDMAPPER.query("LAMBDA > 50")
 
-        MCXC_no_planck = self.remove_duplicates_on_radec(df_MCXC, df_psz2, output_name='MCXC_no_planck', plot=plot)
-        RedMaPPer_no_planck = self.remove_duplicates_on_radec(df_REDMAPPER_30, df_psz2, output_name='RM30_no_planck', plot=plot)
-        RedMaPPer_no_planck = self.remove_duplicates_on_radec(df_REDMAPPER_50, df_psz2, output_name='RM50_no_planck', plot=plot)
-
-        return planck_z, planck_no_z, MCXC_no_planck, RedMaPPer_no_planck
-
-        # mv = missing_data(df_psz2)
-        # print(mv.head())
+        self.remove_duplicates_on_radec(df_MCXC, df_psz2, output_name='MCXC_no_planck', plot=plot)
+        self.remove_duplicates_on_radec(df_REDMAPPER_30, df_psz2, output_name='RM30_no_planck', plot=plot)
+        self.remove_duplicates_on_radec(df_REDMAPPER_50, df_psz2, output_name='RM50_no_planck', plot=plot)
 
 
     def remove_duplicates_on_radec(self, df_main, df_with_dup, output_name, plot=False):
+        """Takes two different dataframes with columns 'RA' & 'DEC' and performs a spatial
+        coordinate match with a 7arcmin tolerance. Saves a .csv file containing df_main 
+        without objects in common from df_with_dup.
+
+        Args:
+            df_main (pd.DataFrame): main dataframe.
+            df_with_dup (pd.DataFrame): dataframe that contains objects from df_main.
+            output_name (str): name that will be used in the plot file name.
+            plot (bool, optional): If True, will save duplicates distance from each other distribution plots. Defaults to False.
+        """
         ID = np.arange(0, len(df_with_dup))
         df_with_dup = df_with_dup[['RA', 'DEC']].copy()
         df_with_dup.insert(loc=0, value=ID, column='ID')
@@ -246,17 +292,22 @@ class MakeData(object):
         df_wo_dup.to_csv(self.path + 'catalogs/' + output_name + '.csv', index=False)
 
 
-
-        return df_wo_dup
-
-
-    def missing_data(self, dataset):
-        all_data_na = (dataset.isnull().sum() / len(dataset)) * 100
-        all_data_na = all_data_na.drop(all_data_na[all_data_na == 0].index).sort_values(ascending=False)[:30]
-        missing_data = pd.DataFrame({'Missing Ratio' :all_data_na})
-        return missing_data
-
     def create_circular_mask(self, h, w, center, ang_center, radius):
+        """Takes a list of center positions and returns a segmentation mask with circulat masks at the center's 
+        position.
+
+        Args:
+            h (int): patch height.
+            w (int): patch width.
+            center (list of tuples): In pixels. List of tupples containing center coordinates to mask.
+            ang_center (list of tuples): In ICRS. Same as center
+            radius ([type]): In arcmin. Disk radius for mask
+
+        Returns:
+            np.ndarray: ndarray with shape (h,w) filled with zeros except at centers position where circular masks 
+            with size radius are equal to one.
+        """
+
         if radius is None:
             size_distribution = fits.open(self.path + 'catalogs/exp_joined_ami_carma_plck_psz1_psz2_act_spt_YT.fits')[1].data['T500']
             heights, bins = np.histogram(size_distribution, bins=8, density=False, range=[0,15])
@@ -282,6 +333,15 @@ class MakeData(object):
 
 
     def create_input(self, p, plot=False, verbose=False):
+        """Creates input/output datasets for all clusters in the selected cluster catalog. Patches contain at least 
+        one cluster that underwent a random translation. It also saves a .npz file containing a list of str in which
+        training, validation and test belonging is specified.
+
+        Args:
+            p (int): loop number.
+            plot (bool, optional): If True, will plot the number of potential objects per patch. Defaults to False.
+            verbose (bool, optional): If True, will print additional information. Defaults to False.
+        """
 
         #------------------------------------------------------------------#
         # # # # # Create common catalog # # # # #
@@ -382,44 +442,14 @@ class MakeData(object):
         inputs = np.ndarray((input_size,self.npix,self.npix,len(self.bands)))
         milca = np.ndarray((input_size,self.npix,self.npix,1))
         dataset_type = []
-
-        hpi = ahp.HEALPix(nside=self.nside, order='ring', frame=ICRS())
-        test_coords = [hpi.healpix_to_skycoord(healpix_index = 6), hpi.healpix_to_skycoord(healpix_index = 7)]
-        val_coords = [hpi.healpix_to_skycoord(healpix_index = 9), hpi.healpix_to_skycoord(healpix_index = 38), hpi.healpix_to_skycoord(healpix_index = 41),
-                      hpi.healpix_to_skycoord(healpix_index = 12), hpi.healpix_to_skycoord(healpix_index = 14), hpi.healpix_to_skycoord(healpix_index = 19),
-                      hpi.healpix_to_skycoord(healpix_index = 21), hpi.healpix_to_skycoord(healpix_index = 23), hpi.healpix_to_skycoord(healpix_index = 25),
-                      hpi.healpix_to_skycoord(healpix_index = 27), hpi.healpix_to_skycoord(healpix_index = 29)]
-
-
         
         for i, coord in enumerate(coords):
-            
-            # dataset_bool = False
-            # for h in range(len(test_coords)):
-            #     if np.abs(coord.ra.degree - test_coords[h].ra.degree) < 14.5 and np.abs(coord.dec.degree - test_coords[h].dec.degree) < 14.5:
-            #         dataset_type.append('test')
-            #         dataset_bool = True
-            #         break
-            #     else:
-            #         pass
-            # if dataset_bool == False:
-            #     for h in range(len(val_coords)):
-            #         if np.abs(coord.ra.degree - val_coords[h].ra.degree) < 14.5 and np.abs(coord.dec.degree - val_coords[h].dec.degree) < 14.5:
-            #             dataset_type.append('val')
-            #             dataset_bool = True
-            #             break
-            #         else:
-            #             pass
-            # if dataset_bool == False:
-            #     dataset_type.append('train')
-
             if hp.ang2pix(self.nside, coord.galactic.l.degree, coord.galactic.b.degree, lonlat=True) == 6 or hp.ang2pix(self.nside, coord.galactic.l.degree, coord.galactic.b.degree, lonlat=True) == 7:
                 dataset_type.append('test')
             elif hp.ang2pix(self.nside, coord.galactic.l.degree, coord.galactic.b.degree, lonlat=True) == 9 or hp.ang2pix(self.nside, coord.galactic.l.degree, coord.galactic.b.degree, lonlat=True) == 38 or hp.ang2pix(self.nside, coord.galactic.l.degree, coord.galactic.b.degree, lonlat=True) == 41 or hp.ang2pix(self.nside, coord.galactic.l.degree, coord.galactic.b.degree, lonlat=True) == 25:
                 dataset_type.append('val')
             else:
                 dataset_type.append('train')
-
 
             patch = cutsky.cut_fits(coord)
             HDU = patch[-1]['fits']
@@ -452,41 +482,6 @@ class MakeData(object):
             for j in range(len(self.bands)):
                 inputs[i,:,:,j] = patch[j]['fits'].data
 
-                #------------------------------------------------------------------#
-                # # # # # Plots # # # # #
-                #------------------------------------------------------------------#
-
-                # if plot == True:
-                #     fig = plt.figure(figsize=(20,5), tight_layout=False)
-                #     ax = fig.add_subplot(131)
-                #     divider = make_axes_locatable(ax)
-                #     cax = divider.append_axes('right', size='5%', pad=0.05)
-                #     im = ax.imshow(HDU.data, origin='lower')
-                #     ax.scatter(x,y)
-                #     ax.set_title('x={:.2f}, y={:.2f}'.format(x,y))
-                #     fig.colorbar(im, cax=cax, orientation='vertical')
-
-                #     ax = fig.add_subplot(132)
-                #     divider = make_axes_locatable(ax)
-                #     cax = divider.append_axes('right', size='5%', pad=0.05)
-                #     im = ax.imshow(mask, origin='lower')
-                #     ax.set_title('x={:.2f}, y={:.2f}'.format(x,y))
-                #     fig.colorbar(im, cax=cax, orientation='vertical')
-
-                #     ax = fig.add_subplot(133)
-                #     divider = make_axes_locatable(ax)
-                #     cax = divider.append_axes('right', size='5%', pad=0.05)
-                #     patch_ns = cutsky.cut_fits(coords_ns[i])
-                #     HDU_ns = patch_ns[6]['fits']
-                #     im = ax.imshow(HDU_ns.data, origin='lower')
-                #     ax.scatter(32,32)
-                #     ax.set_title('x={:.0f}, y={:.0f}'.format(32,32))
-                #     fig.colorbar(im, cax=cax, orientation='vertical')
-
-                #     plt.savefig(self.temp_path + 'random_mask_milca-y_%s'%i + '.png', bbox_inches='tight', transparent=False)
-                #     plt.show()
-                #     plt.close()
-
         #------------------------------------------------------------------#
         # # # # # Save files # # # # #
         #------------------------------------------------------------------#
@@ -503,8 +498,22 @@ class MakeData(object):
 
 
     def train_data_generator(self, loops, n_jobs = 1, plot=True):
+        """Calls create_input n=loops times to create input/output datasets for all clusters in the selected cluster
+        catalog. Patches contain at least one cluster and for each loop, patches undergo random translations. 
+        Function saves the following datasets as .npz files:
+            - dataset_type: list of str containing either 'train', 'val' or 'test'. 
+            - inputs: np.ndarray with shape (loops*len(self.dataset), self.npix, self.npix, len(self.bands)) containing input patches
+            - labels: np.ndarray with shape (loops*len(self.dataset), self.npix, self.npix, 1) containing segmentation masks
+            - milca:  np.ndarray with shape (loops*len(self.dataset), self.npix, self.npix, 1) containing milca patches.
 
-        all_files = glob.glob(os.path.join(self.output_path + "files/*.npz"))
+        Args:
+            loops (int): number of times the dataset containing patches with at least one cluster within will be 
+                         added again to training set with random variations (translations)
+            n_jobs (int, optional): Core numbers that will be used. Core numbers cannot exceed loops. Defaults to 1.
+            plot (bool, optional): If True, will plot the number of potential objects per patch. Defaults to True.
+        """
+
+        all_files = glob.glob(os.path.join(self.output_path + 'files/f%s_d%s/*.npz'%(self.freq, self.disk_radius)))
         for f in all_files:
             os.remove(f)
 
@@ -545,6 +554,19 @@ class MakeData(object):
         np.savez_compressed(self.dataset_path + 'milca_f%s_d%s'%(self.freq, self.disk_radius) + self.dataset, milca)
 
     def fit_gaussian_up_to_mode(self, dataset, index, slice='train', plot=True):
+        """Fits a gaussian function to a 1d-ndarray on data up to mode.
+
+        Args:
+            dataset (np.ndarray): 1D ndarray containing a 3D flattened ndarray with input data for one band.
+            index ([type]): index in self.bands.
+            slice (str, optional): Dataset type. Either 'train', 'val', or 'test'. Defaults to 'train'.
+            plot (bool, optional): If True will plot dataset distribution with the gaussian fit on top. 
+                                Defaults to True.
+
+        Returns:
+            float: sigma value in A*np.exp(-0.5*((x-mu)/sigma)**2) obtained with a leastsq fit.
+        """
+
         from scipy.optimize import leastsq
 
         dataset = np.sort(dataset)
@@ -632,6 +654,26 @@ class MakeData(object):
         return abs(c[2])
 
     def train_val_test_split(self, inputs_train, labels_train, dataset_type_train, inputs_test, labels_test, dataset_type_test, milca_test):
+        """Splits input, output and milca datasets into training, validation and test.
+
+        Args:
+            inputs_train (np.ndarray): [description]
+            labels_train (np.ndarray): [description]
+            dataset_type_train (np.ndarray): [description]
+            inputs_test (np.ndarray): [description]
+            labels_test (np.ndarray): [description]
+            dataset_type_test (np.ndarray): [description]
+            milca_test (np.ndarray): [description]
+
+        Returns:
+            (np.ndarray): X_train; 
+            (np.ndarray): X_val;
+            (np.ndarray): X_test; 
+            (np.ndarray): output_train; 
+            (np.ndarray): output_val;
+            (np.ndarray): output_test;
+            (np.ndarray): M_test;
+        """
 
         type_count_train = Counter(dataset_type_train)
         type_count_test = Counter(dataset_type_test)
@@ -667,6 +709,16 @@ class MakeData(object):
 
         
     def preprocess(self, leastsq=False, range_comp=True, plot=True):
+        """Takes input, output and milca data from train_data_generator and splits it into training, validation and test set.
+        Data is then individually standardized and compressed for each dataset.
+
+        Args:
+            leastsq (bool, optional): If True, sigma will be computed by fitting a gaussian up to mode. If False, sigma will be 
+                                    computed using MAD. Defaults to False.
+            range_comp (bool, optional): If True, range compression will be applied. Defaults to True.
+            plot (bool, optional): If True, will plot distributions for data after standadization and range compression. Defaults to True.
+        """
+
         inputs_train = np.load(self.dataset_path + 'input_f%s_d%s'%(self.freq, self.disk_radius) + self.dataset + '.npz')['arr_0']
         labels_train = np.load(self.dataset_path + 'label_f%s_d%s'%(self.freq, self.disk_radius) + self.dataset + '.npz')['arr_0']
         dataset_type_train = np.load(self.dataset_path + 'type_f%s_d%s'%(self.freq, self.disk_radius) + self.dataset + '.npz')['arr_0']
@@ -1586,28 +1638,6 @@ class CNNSegmentation(object):
         loss = tf.nn.weighted_cross_entropy_with_logits(labels, logits, pos_weight = pos_weight)
         # loss = tf.reduce_mean(weighted_losses)
         return loss
-
-    def get_focal_params(self, y_pred):
-        epsilon = tf.constant(1e-9)
-        gamma = tf.constant(3.)
-        y_pred = y_pred + epsilon
-        pinv = 1./y_pred
-        pos_weight_f = (pinv - 1)**gamma
-        weight_f = y_pred**gamma
-        return pos_weight_f, weight_f
-
-    def custom_loss(self, y_true,y_pred):
-        y_pred_prob = tf.keras.backend.sigmoid(y_pred)    
-        pos_weight_f, weight_f = self.get_focal_params(y_pred_prob)
-        alpha = tf.constant(.35)
-        alpha_ = 1 - alpha
-        alpha_div = alpha / alpha_
-        pos_weight = pos_weight_f * alpha_div
-        weight = weight_f * alpha_
-
-        l2 = weight * tf.nn.weighted_cross_entropy_with_logits\
-        (labels=y_true, logits=y_pred, pos_weight=pos_weight)
-        return l2
 
     def objects_in_patch(self, p, catalog, plot=False):
 

@@ -6,7 +6,8 @@ Main script
 """
 
 import argparse
-from functions import GenerateFiles, MakeData, CNNSegmentation
+from generate_files import GenerateFiles
+from functions import MakeData, CNNSegmentation
 import importlib
 import warnings
 import logging
@@ -56,9 +57,7 @@ if args.make_directories == True:
     GenFiles.make_directories(output = True, replace=p.merge_daily_output_directory)
 
 if args.cluster_catalogs == True:
-    planck_z, planck_no_z, MCXC_no_planck, RedMaPPer_no_planck = MData.create_catalogs(plot=p.plot_catalogs)
-    # MData.plot_psz2_clusters(planck_path, milca_path, healpix_path)
-    # GenFiles.remove_files_from_directory(healpix_path + 'PSZ2/')
+    MData.create_catalogs(plot=p.plot_catalogs)
 
 if args.dataset == True:
     MData.train_data_generator(loops=p.loops, n_jobs=args.nodes, plot=False)
