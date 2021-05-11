@@ -7,7 +7,10 @@ Main script
 
 import argparse
 from generate_files import GenerateFiles
-from functions import MakeData, CNNSegmentation
+from functions import MakeData
+from make_data import MakeData
+from segmentation import CNNSegmentation
+
 import importlib
 import warnings
 import logging
