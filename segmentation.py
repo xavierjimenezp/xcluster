@@ -20,29 +20,29 @@ import models
 from generate_files import GenerateFiles
 from make_data import MakeData
 
-# import matplotlib.pyplot as plt
-# from mpl_toolkits.axes_grid1 import make_axes_locatable
-# from matplotlib.colors import LogNorm
-# import seaborn as sns
-# import matplotlib.style as style
-# style.use('seaborn-poster') #sets the size of the charts
-# style.use('ggplot')
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.colors import LogNorm
+import seaborn as sns
+import matplotlib.style as style
+style.use('seaborn-poster') #sets the size of the charts
+style.use('ggplot')
 
-# from astropy.io import fits
-# from astropy.wcs import WCS
-# from astropy.utils.data import get_pkg_data_filename
-# from astropy.coordinates import SkyCoord, match_coordinates_sky
-# import astropy.units as u
-# from astropy.stats import mad_std
-# import astrotools.healpytools as hpt
-# import astropy_healpix as ahp
-# from astropy.coordinates import ICRS
+from astropy.io import fits
+from astropy.wcs import WCS
+from astropy.utils.data import get_pkg_data_filename
+from astropy.coordinates import SkyCoord, match_coordinates_sky
+import astropy.units as u
+from astropy.stats import mad_std
+import astrotools.healpytools as hpt
+import astropy_healpix as ahp
+from astropy.coordinates import ICRS
 
-# from tqdm import tqdm
-# from collections import Counter
+from tqdm import tqdm
+from collections import Counter
 
-# import warnings
-# warnings.filterwarnings('ignore')
+import warnings
+warnings.filterwarnings('ignore')
 
 import tensorflow as tf
 from tensorflow.keras.layers import *
