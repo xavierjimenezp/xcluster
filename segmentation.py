@@ -66,9 +66,69 @@ mpl_logger = logging.getLogger('matplotlib')
 mpl_logger.setLevel(logging.WARNING)
 
 
-class CNNSegmentation(object):
+class CNNSegmentation(MakeData):
 
-    def __init__(self, model, range_comp, dataset, bands, planck_path, milca_path, epochs, batch, lr, patience, loss, optimizer, loops, size=64, disk_radius = None, drop_out=False, output_path = None):
+    def __init__(self, dataset, bands, planck_path, milca_path, model, range_comp, epochs, batch, lr, patience, loss, optimizer, loops, size=64, disk_radius = None, drop_out=False, output_path = None):
+        super().__init__(dataset, bands, planck_path, milca_path, disk_radius=disk_radius, output_path=output_path)
+
+        self.range_comp = range_comp
+        self.loops = loops
+        self.size = size
+        self.drop_out = drop_out
+        self.epochs = epochs
+        self.batch = batch
+        self.lr = lr 
+        self.patience = patience
+        self.pmax=0.9
+        self.dmin=3
+        self.dmax=15
+
+        self.output_name = 'e%s_b%s_lr%s_p%s_d%s'%(epochs, batch, lr, patience, disk_radius)
+
+        optimizers_dict = {'sgd': SGD(lr=self.lr, momentum=0.9), 'adam': Adam(learning_rate=self.lr)}
+        self.optimizer =  optimizers_dict[optimizer]
+        self.optimizer_name =  optimizer
+        losses_dict = {'binary_crossentropy': 'binary_crossentropy', 'weighted_binary_crossentropy': 'binary_crossentropy', 'tversky_loss': losses.tversky_loss, 'focal_tversky_loss': losses.focal_tversky_loss(gamma=0.75), 'dice_loss': losses.dice_loss, 
+                       'combo_loss': losses.combo_loss(alpha=0.5,beta=0.5), 'cosine_tversky_loss': losses.cosine_tversky_loss(gamma=1), 'focal_dice_loss': losses.focal_dice_loss(delta=0.7, gamma_fd=0.75), 
+                       'focal_loss': losses.focal_loss(alpha=None, beta=None, gamma_f=2.), 'mixed_focal_loss': losses.mixed_focal_loss(weight=None, alpha=None, beta=None, delta=0.7, gamma_f=2.,gamma_fd=0.75)}
+        self.loss = losses_dict[loss]
+        self.loss_name = loss
+        input_size = (self.npix, self.npix, len(self.bands))
+        filter_num = [64, 128, 256, 512]#, 1024]
+        n_labels = 1
+        dilation_num = [1, 3, 15, 31]
+        filter_num_down = [64, 128, 256, 512]#, 1024]
+
+        #               'vnet': tf_models.vnet_2d(input_size, filter_num, n_labels, res_num_ini=1, res_num_max=3, 
+        #                     activation='ReLU', output_activation='Softmax', batch_norm=False, pool=True, unpool=True, name='vnet'),
+
+
+        model_dict={'unet': models.unet, 
+                    'attn_unet': tf_models.att_unet_2d(input_size, filter_num, n_labels, stack_num_down=2, stack_num_up=2, 
+                            activation='ReLU', atten_activation='ReLU', attention='add', output_activation='Sigmoid', 
+                            batch_norm=True, weights=None, pool=False, unpool=False, freeze_batch_norm=True, name='attunet'),
+                    'r2u_net': tf_models.r2_unet_2d(input_size, filter_num, n_labels, 
+                            stack_num_down=2, stack_num_up=2, recur_num=2,
+                            activation='ReLU', output_activation='Softmax', 
+                            batch_norm=False, pool=True, unpool=True, name='r2_unet'),
+                    'unet_plus': tf_models.unet_plus_2d(input_size, filter_num, n_labels, stack_num_down=2, stack_num_up=2,
+                            activation='ReLU', output_activation='Softmax', batch_norm=False, pool=True, unpool=True, deep_supervision=False, 
+                            backbone=None, weights=None, freeze_backbone=True, freeze_batch_norm=True, name='xnet'),
+                    'resunet_a': tf_models.resunet_a_2d(input_size, filter_num, dilation_num, n_labels,
+                            aspp_num_down=256, aspp_num_up=128, activation='ReLU', output_activation='Softmax', 
+                            batch_norm=True, pool=True, unpool=True, name='resunet'),
+                    'u2net': tf_models.u2net_2d(input_size, n_labels, filter_num_down, filter_num_up='auto', filter_mid_num_down='auto', filter_mid_num_up='auto', 
+                            filter_4f_num='auto', filter_4f_mid_num='auto', activation='ReLU', output_activation='Sigmoid', 
+                            batch_norm=False, pool=True, unpool=True, deep_supervision=False, name='u2net'),
+                    'unet_3plus': tf_models.unet_3plus_2d(input_size, n_labels, filter_num_down, filter_num_skip='auto', filter_num_aggregate='auto', 
+                            stack_num_down=2, stack_num_up=1, activation='ReLU', output_activation='Sigmoid',
+                            batch_norm=False, pool=True, unpool=True, deep_supervision=False, 
+                            backbone=None, weights=None, freeze_backbone=True, freeze_batch_norm=True, name='unet3plus')}
+
+        self.model = model_dict[model]
+        self.model_name = model
+
+    # def __init__(self, model, range_comp, dataset, bands, planck_path, milca_path, epochs, batch, lr, patience, loss, optimizer, loops, size=64, disk_radius = None, drop_out=False, output_path = None):
         self.path = os.getcwd() + '/'
         self.dataset = dataset # 'planck_z', 'planck_z_no-z', 'MCXC', 'RM30', 'RM50'
         self.bands = bands # '100GHz','143GHz','217GHz','353GHz','545GHz','857GHz', 'y-map'

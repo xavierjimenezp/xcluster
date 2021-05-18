@@ -34,7 +34,7 @@ parser.add_argument("-d", "--dataset", required=False, type=bool, nargs="?", con
 parser.add_argument("-t", "--train", required=False, type=bool, nargs="?", const=False)
 parser.add_argument("-p", "--predict", required=False, type=bool, nargs="?", const=False)
 parser.add_argument("-i", "--input", required=False, type=str)
-
+parser.add_argument("-x", "--test", required=False, type=bool, nargs="?", const=False)
 
 args = parser.parse_args()
 
@@ -48,26 +48,46 @@ else:
 if args.nodes is None:
         args.nodes = 1
 
-GenFiles = GenerateFiles(dataset = p.dataset, output_path = p.path)
-MData = MakeData(dataset = p.dataset, bands=p.bands, planck_path=p.planck_path, milca_path=p.milca_path, disk_radius= p.disk_radius, output_path = p.path)
-CNN = CNNSegmentation(model = p.model, range_comp=p.range_compression, dataset = p.dataset, bands=p.bands, planck_path=p.planck_path, milca_path=p.milca_path, epochs=p.epochs, batch=p.batch, 
-                       lr=p.lr, patience=p.patience, loss=p.loss, optimizer=p.optimizer, loops=p.loops, disk_radius=p.disk_radius, output_path = p.path)
+# GenFiles = GenerateFiles(dataset = p.dataset, output_path = p.path)
+# MData = MakeData(dataset = p.dataset, bands=p.bands, planck_path=p.planck_path, milca_path=p.milca_path, disk_radius= p.disk_radius, output_path = p.path)
+# CNN = CNNSegmentation(model = p.model, range_comp=p.range_compression, dataset = p.dataset, bands=p.bands, planck_path=p.planck_path, milca_path=p.milca_path, epochs=p.epochs, batch=p.batch, 
+#                        lr=p.lr, patience=p.patience, loss=p.loss, optimizer=p.optimizer, loops=p.loops, disk_radius=p.disk_radius, output_path = p.path)
 
 if args.make_directories == True:
+    GenFiles = GenerateFiles(dataset = p.dataset, output_path = p.path)
 
     GenFiles.clean_temp_directories()
     GenFiles.make_directories()
     GenFiles.make_directories(output = True, replace=p.merge_daily_output_directory)
 
 if args.cluster_catalogs == True:
-    MData.create_catalogs(plot=p.plot_catalogs)
+    MData = MakeData(dataset = p.dataset, bands=p.bands, planck_path=p.planck_path, milca_path=p.milca_path, disk_radius= p.disk_radius, output_path = p.path)
+
+    # MData.create_catalogs(plot=p.plot_catalogs)
+    MData.create_fake_source_catalog()
+
+if args.test == True:
+    MData = MakeData(dataset = p.dataset, bands=p.bands, planck_path=p.planck_path, milca_path=p.milca_path, disk_radius= p.disk_radius, output_path = p.path)
+
+    warnings.simplefilter("always")
+    warnings.warn("'-x' or '--test' is used for testing functions")
+    # MData.test_data_generator(plot=True, verbose=True)
+    MData.make_input(p=0, plot=True, verbose=True)
 
 if args.dataset == True:
+    MData = MakeData(dataset = p.dataset, bands=p.bands, planck_path=p.planck_path, milca_path=p.milca_path, disk_radius= p.disk_radius, output_path = p.path)
+
     MData.train_data_generator(loops=p.loops, n_jobs=args.nodes, plot=False)
     MData.preprocess(leastsq=p.fit_up_to_mode, range_comp=p.range_compression, plot=p.plot_dataset)
 
 if args.train == True:
+    CNN = CNNSegmentation(model = p.model, range_comp=p.range_compression, dataset = p.dataset, bands=p.bands, planck_path=p.planck_path, milca_path=p.milca_path, epochs=p.epochs, batch=p.batch, 
+                       lr=p.lr, patience=p.patience, loss=p.loss, optimizer=p.optimizer, loops=p.loops, disk_radius=p.disk_radius, output_path = p.path)
+
     CNN.train_model()
 
 if args.predict == True:
+    CNN = CNNSegmentation(model = p.model, range_comp=p.range_compression, dataset = p.dataset, bands=p.bands, planck_path=p.planck_path, milca_path=p.milca_path, epochs=p.epochs, batch=p.batch, 
+                       lr=p.lr, patience=p.patience, loss=p.loss, optimizer=p.optimizer, loops=p.loops, disk_radius=p.disk_radius, output_path = p.path)
+
     CNN.evaluate_prediction(plot=p.plot_prediction, plot_patch = p.plot_individual_patchs)

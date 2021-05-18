@@ -15,6 +15,7 @@ import pandas as pd
 import os
 import time
 import glob
+import itertools
 from joblib import Parallel, delayed
 from generate_files import GenerateFiles
 
@@ -25,6 +26,8 @@ import seaborn as sns
 import matplotlib.style as style
 style.use('seaborn-poster') #sets the size of the charts
 style.use('ggplot')
+
+from scipy import ndimage
 
 from astropy.io import fits
 from astropy.wcs import WCS
@@ -89,28 +92,38 @@ class MakeData(object):
 
         maps = []
         self.freq = 0
+        self.planck_freq = 0
         if '100GHz' in  bands:
             maps.append((planck_path + "HFI_SkyMap_100-field-IQU_2048_R3.00_full.fits", {'legend': 'HFI 100', 'docontour': True}))
             self.freq += 2
+            self.planck_freq += 2
         if '143GHz' in bands:
             maps.append((planck_path + "HFI_SkyMap_143-field-IQU_2048_R3.00_full.fits", {'legend': 'HFI 143', 'docontour': True}))
             self.freq += 4
+            self.planck_freq += 4
         if '217GHz' in bands:
             maps.append((planck_path + "HFI_SkyMap_217-field-IQU_2048_R3.00_full.fits", {'legend': 'HFI 217', 'docontour': True}))
             self.freq += 8
+            self.planck_freq += 8
         if '353GHz' in bands:
             maps.append((planck_path + "HFI_SkyMap_353-psb-field-IQU_2048_R3.00_full.fits", {'legend': 'HFI 353', 'docontour': True}))
             self.freq += 16
+            self.planck_freq += 16
         if '545GHz' in bands:
             maps.append((planck_path + "HFI_SkyMap_545-field-Int_2048_R3.00_full.fits", {'legend': 'HFI 545', 'docontour': True}))
             self.freq += 32
+            self.planck_freq += 32
         if '857GHz' in bands:
             maps.append((planck_path + "HFI_SkyMap_857-field-Int_2048_R3.00_full.fits", {'legend': 'HFI 857', 'docontour': True}))
             self.freq += 64
+            self.planck_freq += 64
         if 'y-map' in bands:
             maps.append((milca_path + "milca_ymaps.fits", {'legend': 'MILCA y-map', 'docontour': True}))
             self.freq += 128
-        maps.append((milca_path + "milca_ymaps.fits", {'legend': 'MILCA y-map', 'docontour': True}))
+        if 'CO' in bands:
+            maps.append((planck_path + "COM_CompMap_CO21-commander_2048_R2.00.fits", {'legend': 'CO', 'docontour': True}))
+            self.freq += 254
+        maps.append((milca_path + "milca_ymaps.fits", {'legend': 'MILCA y-map', 'docontour': True})) #used for plots only
         
         self.maps = maps
 
@@ -119,8 +132,9 @@ class MakeData(object):
             self.disk_radius = disk_radius
         else:
             self.disk_radius = 'istri'
-        self.npix = 64
-        self.pixsize = 1.7
+        self.npix = 64 #in pixels
+        self.pixsize = 1.7 #in arcmin
+        self.ndeg = (self.npix * self.pixsize)/60 #in deg
         self.nside = 2
         if output_path is None:
             self.output_path = self.path + 'output/' + self.dataset + time.strftime("/%Y-%m-%d/")
@@ -224,6 +238,93 @@ class MakeData(object):
         self.remove_duplicates_on_radec(df_REDMAPPER_50, df_psz2, output_name='RM50_no_planck', plot=plot)
 
 
+    def create_fake_source_catalog(self):
+        ACT = fits.open(self.planck_path + 'sptecs_catalog_oct919_forSZDB.fits')
+        SPT = fits.open(self.planck_path + 'DR5_cluster-catalog_v1.1_forSZDB.fits')
+        PGCC = fits.open(self.planck_path + 'HFI_PCCS_GCC_R2.02.fits')
+
+        df_act = pd.DataFrame(data={'RA': list(ACT[1].data['RA']), 'DEC': list(ACT[1].data['DEC']), 'GLON': list(ACT[1].data['GLON']), 'GLAT': list(ACT[1].data['GLAT'])})
+        df_spt = pd.DataFrame(data={'RA': list(SPT[1].data['RA']), 'DEC': list(SPT[1].data['DEC']), 'GLON': list(SPT[1].data['GLON']), 'GLAT': list(SPT[1].data['GLAT'])})
+        df_pgcc = pd.DataFrame(data={'RA': list(PGCC[1].data['RA']), 'DEC': list(PGCC[1].data['DEC']), 'GLON': list(PGCC[1].data['GLON']), 'GLAT': list(PGCC[1].data['GLAT'])})
+
+        ACT.close()
+        SPT.close()
+        PGCC.close()
+
+        df_act.to_csv(self.path + 'catalogs/' + 'ACT' + '.csv', index=False)
+        df_spt.to_csv(self.path + 'catalogs/' + 'SPT' + '.csv', index=False)
+        df_pgcc.to_csv(self.path + 'catalogs/' + 'PGCC' + '.csv', index=False)
+
+        df = pd.DataFrame(columns=['RA','DEC','GLON','GLAT'])
+
+        bands = ['100GHz', '143GHz', '217GHz', '353GHz', '545GHz', '857GHz']
+        cs_100 = fits.open(self.planck_path + 'COM_PCCS_100_R2.01.fits')
+        cs_143 = fits.open(self.planck_path + 'COM_PCCS_143_R2.01.fits')
+        cs_217 = fits.open(self.planck_path + 'COM_PCCS_217_R2.01.fits')
+        cs_353 = fits.open(self.planck_path + 'COM_PCCS_353_R2.01.fits')
+        cs_545 = fits.open(self.planck_path + 'COM_PCCS_545_R2.01.fits')
+        cs_857 = fits.open(self.planck_path + 'COM_PCCS_857_R2.01.fits')
+
+
+        freq = 0
+        if '100GHz' in bands:
+            freq += 2
+            df = pd.concat((df, pd.DataFrame(data={'RA': list(cs_100[1].data['RA']), 'DEC': list(cs_100[1].data['DEC']), 'GLON': list(cs_100[1].data['GLON']), 'GLAT': list(cs_100[1].data['GLAT'])})))
+        if '143GHz' in bands:
+            freq += 4
+            df = pd.concat((df, pd.DataFrame(data={'RA': list(cs_143[1].data['RA']), 'DEC': list(cs_143[1].data['DEC']), 'GLON': list(cs_143[1].data['GLON']), 'GLAT': list(cs_143[1].data['GLAT'])})))
+        if '217GHz' in bands:
+            freq += 8
+            df = pd.concat((df, pd.DataFrame(data={'RA': list(cs_217[1].data['RA']), 'DEC': list(cs_217[1].data['DEC']), 'GLON': list(cs_217[1].data['GLON']), 'GLAT': list(cs_217[1].data['GLAT'])})))
+        if '353GHz' in bands:
+            freq += 16
+            df = pd.concat((df, pd.DataFrame(data={'RA': list(cs_353[1].data['RA']), 'DEC': list(cs_353[1].data['DEC']), 'GLON': list(cs_353[1].data['GLON']), 'GLAT': list(cs_353[1].data['GLAT'])})))
+        if '545GHz' in bands:
+            freq += 32
+            df = pd.concat((df, pd.DataFrame(data={'RA': list(cs_545[1].data['RA']), 'DEC': list(cs_545[1].data['DEC']), 'GLON': list(cs_545[1].data['GLON']), 'GLAT': list(cs_545[1].data['GLAT'])})))
+        if '857GHz' in bands:
+            freq += 64
+            df = pd.concat((df, pd.DataFrame(data={'RA': list(cs_857[1].data['RA']), 'DEC': list(cs_857[1].data['DEC']), 'GLON': list(cs_857[1].data['GLON']), 'GLAT': list(cs_857[1].data['GLAT'])})))
+        
+        df_all = pd.concat((df_act, df_spt, df_pgcc, df))
+        df.to_csv(self.path + 'catalogs/' + 'CS_f%s'%freq + '.csv', index=False)
+        df_all.to_csv(self.path + 'catalogs/' + 'False_SZ_catalog_f%s'%freq + '.csv', index=False)
+
+        df = pd.DataFrame(columns=['RA','DEC','GLON','GLAT'])
+        for L in range(1, len(bands)):
+            for subset in tqdm(itertools.combinations(bands, L)):
+                freq = 0
+                if '100GHz' in subset:
+                    freq += 2
+                    df = pd.concat((df, pd.DataFrame(data={'RA': list(cs_100[1].data['RA']), 'DEC': list(cs_100[1].data['DEC']), 'GLON': list(cs_100[1].data['GLON']), 'GLAT': list(cs_100[1].data['GLAT'])})))
+                if '143GHz' in subset:
+                    freq += 4
+                    df = pd.concat((df, pd.DataFrame(data={'RA': list(cs_143[1].data['RA']), 'DEC': list(cs_143[1].data['DEC']), 'GLON': list(cs_143[1].data['GLON']), 'GLAT': list(cs_143[1].data['GLAT'])})))
+                if '217GHz' in subset:
+                    freq += 8
+                    df = pd.concat((df, pd.DataFrame(data={'RA': list(cs_217[1].data['RA']), 'DEC': list(cs_217[1].data['DEC']), 'GLON': list(cs_217[1].data['GLON']), 'GLAT': list(cs_217[1].data['GLAT'])})))
+                if '353GHz' in subset:
+                    freq += 16
+                    df = pd.concat((df, pd.DataFrame(data={'RA': list(cs_353[1].data['RA']), 'DEC': list(cs_353[1].data['DEC']), 'GLON': list(cs_353[1].data['GLON']), 'GLAT': list(cs_353[1].data['GLAT'])})))
+                if '545GHz' in subset:
+                    freq += 32
+                    df = pd.concat((df, pd.DataFrame(data={'RA': list(cs_545[1].data['RA']), 'DEC': list(cs_545[1].data['DEC']), 'GLON': list(cs_545[1].data['GLON']), 'GLAT': list(cs_545[1].data['GLAT'])})))
+                if '857GHz' in subset:
+                    freq += 64
+                    df = pd.concat((df, pd.DataFrame(data={'RA': list(cs_857[1].data['RA']), 'DEC': list(cs_857[1].data['DEC']), 'GLON': list(cs_857[1].data['GLON']), 'GLAT': list(cs_857[1].data['GLAT'])})))
+                
+                df_all = pd.concat((df_act, df_spt, df_pgcc, df))
+                df.to_csv(self.path + 'catalogs/' + 'CS_f%s'%freq + '.csv', index=False)
+                df_all.to_csv(self.path + 'catalogs/' + 'False_SZ_catalog_f%s'%freq + '.csv', index=False)
+    
+        cs_100.close()
+        cs_143.close()
+        cs_217.close()
+        cs_353.close()
+        cs_545.close()
+        cs_857.close()
+
+
     def remove_duplicates_on_radec(self, df_main, df_with_dup, output_name, plot=False):
         """Takes two different dataframes with columns 'RA' & 'DEC' and performs a spatial
         coordinate match with a 7arcmin tolerance. Saves a .csv file containing df_main 
@@ -243,7 +344,7 @@ class MakeData(object):
         pcatalog_sub = SkyCoord(ra=df_with_dup['RA'].values, dec=df_with_dup['DEC'].values, unit='deg')
         idx, d2d, _ = match_coordinates_sky(scatalog_sub, pcatalog_sub, nthneighbor=1)
 
-        tol = 7
+        tol = 5
         ismatched = d2d < tol*u.arcminute #threshold to consider whether or not two galaxies are the same
 
         df_d2d = pd.DataFrame(data={'ismatched': ismatched, 'idx': idx, 'd2d': d2d})
@@ -317,6 +418,537 @@ class MakeData(object):
                 dec.append(ang_center[i][1])
         return np.where(mask > 1, 1, mask), count, ra, dec
 
+    def return_coord_catalog(self):
+        if self.dataset == 'planck_z':
+            planck_z = pd.read_csv(self.path + 'catalogs/planck_z' + '.csv')
+            coord_catalog = planck_z[['RA', 'DEC', 'GLON', 'GLAT']].copy()
+        elif self.dataset == 'planck_no-z':
+            planck_z = pd.read_csv(self.path + 'catalogs/planck_z' + '.csv')
+            planck_no_z = pd.read_csv(self.path + 'catalogs/planck_no-z' + '.csv')
+            coord_catalog = pd.concat([planck_z[['RA', 'DEC', 'GLON', 'GLAT']].copy(), planck_no_z[['RA', 'DEC']].copy()], ignore_index=True)
+        elif self.dataset == 'MCXC':
+            planck_z = pd.read_csv(self.path + 'catalogs/planck_z' + '.csv')
+            planck_no_z = pd.read_csv(self.path + 'catalogs/planck_no-z' + '.csv')
+            MCXC = pd.read_csv(self.path + 'catalogs/MCXC_no_planck' + '.csv')
+            coord_catalog = pd.concat([planck_z[['RA', 'DEC', 'GLON', 'GLAT']].copy(), planck_no_z[['RA', 'DEC']].copy(), MCXC[['RA', 'DEC']].copy()],
+                ignore_index=True)
+        elif self.dataset == 'RM30':
+            planck_z = pd.read_csv(self.path + 'catalogs/planck_z' + '.csv')
+            planck_no_z = pd.read_csv(self.path + 'catalogs/planck_no-z' + '.csv')
+            MCXC = pd.read_csv(self.path + 'catalogs/MCXC_no_planck' + '.csv')
+            RM30 = pd.read_csv(self.path + 'catalogs/RM30_no_planck' + '.csv')
+            coord_catalog = pd.concat([planck_z[['RA', 'DEC', 'GLON', 'GLAT']].copy(), planck_no_z[['RA', 'DEC']].copy(), MCXC[['RA', 'DEC']].copy(),
+                RM30[['RA', 'DEC']].copy()], ignore_index=True)
+        elif self.dataset == 'RM50':
+            planck_z = pd.read_csv(self.path + 'catalogs/planck_z' + '.csv')
+            planck_no_z = pd.read_csv(self.path + 'catalogs/planck_no-z' + '.csv')
+            MCXC = pd.read_csv(self.path + 'catalogs/MCXC_no_planck' + '.csv')
+            RM50 = pd.read_csv(self.path + 'catalogs/RM50_no_planck' + '.csv')
+            coord_catalog = pd.concat([planck_z[['RA', 'DEC', 'GLON', 'GLAT']].copy(), planck_no_z[['RA', 'DEC']].copy(), MCXC[['RA', 'DEC']].copy(),
+                RM50[['RA', 'DEC']].copy()], ignore_index=True)
+
+        false_catalog = pd.read_csv(self.path + 'catalogs/False_SZ_catalog_f%s.csv'%self.planck_freq)
+        return coord_catalog, false_catalog
+
+    def rotate(self, origin, point, angle):
+        """
+        Rotate a point clockwise by a given angle around a given origin.
+
+        The angle should be given in radians.
+        """
+        angle = -np.radians(angle) #transform in radians, - sign is there to ensure clockwise
+
+        ox, oy = origin
+        px, py = point
+
+        qx = ox + np.cos(angle) * (px - ox) - np.sin(angle) * (py - oy)
+        qy = oy + np.sin(angle) * (px - ox) + np.cos(angle) * (py - oy)
+        return qx, qy
+
+    def rotate_patch(self, p, i, band, patch_rot, coord_catalog, random_angle, n_rot):
+
+        HDU_rot = patch_rot[band]['fits']
+        HDU_rot_data = ndimage.rotate(np.array(HDU_rot.data), random_angle, reshape=False)
+        wcs_rot = WCS(HDU_rot.header)
+        x_rot,y_rot = wcs_rot.world_to_pixel_values(coord_catalog['RA'].values[i], coord_catalog['DEC'].values[i])
+        x_rot, y_rot = self.rotate(origin=(0.5*self.npix*np.sqrt(2), 0.5*self.npix*np.sqrt(2)), point=(x_rot,y_rot), angle=random_angle)
+        x_rot, y_rot = x_rot-int(0.5*self.npix*(np.sqrt(2)-1)), y_rot-int(0.5*self.npix*(np.sqrt(2)-1))
+
+        if x_rot < 0 or x_rot > self.npix or y_rot < 0 or y_rot > self.npix:
+            np.random.seed(p+i+200)
+            random_int = np.random.randint(300,400)
+            random_index = 0
+            while x_rot < 0 or x_rot > self.npix or y_rot < 0 or y_rot > self.npix:
+                np.random.seed(random_int+random_index)
+                random_angle = 360*float(np.random.rand(1))
+
+                HDU_rot_data = ndimage.rotate(np.array(HDU_rot.data), random_angle, reshape=False)
+                wcs_rot = WCS(HDU_rot.header)
+                x_rot,y_rot = wcs_rot.world_to_pixel_values(coord_catalog['RA'].values[i], coord_catalog['DEC'].values[i])
+                x_rot, y_rot = self.rotate(origin=(0.5*self.npix*np.sqrt(2), 0.5*self.npix*np.sqrt(2)), point=(x_rot,y_rot), angle=random_angle)
+                x_rot, y_rot = x_rot-int(0.5*self.npix*(np.sqrt(2)-1)), y_rot-int(0.5*self.npix*(np.sqrt(2)-1))
+                random_index += 1
+
+        return HDU_rot_data[n_rot:-n_rot, n_rot:-n_rot]
+
+
+    def make_input(self, p, plot=False, verbose=False):
+        """Creates input/output datasets for all clusters in the selected cluster catalog. Patches contain at least 
+        one cluster that underwent a random translation. It also saves a .npz file containing a list of str in which
+        training, validation and test belonging is specified.
+
+        Args:
+            p (int): loop number.
+            plot (bool, optional): If True, will plot the number of potential objects per patch. Defaults to False.
+            verbose (bool, optional): If True, will print additional information. Defaults to False.
+        """
+
+        #------------------------------------------------------------------#
+        # # # # # Create common catalog # # # # #
+        #------------------------------------------------------------------#
+
+        if p != 0:
+            plot = False
+
+        coord_catalog, false_catalog = self.return_coord_catalog()
+
+        #------------------------------------------------------------------#
+        # # # # # Create ramdon coordinate translations # # # # #
+        #------------------------------------------------------------------#
+
+        input_size = len(coord_catalog['RA'].values)
+        coords_ns = SkyCoord(ra=coord_catalog['RA'].values, dec=coord_catalog['DEC'].values, unit='deg')
+        np.random.seed(p)
+        random_coord_x = 2*np.random.rand(1, input_size).flatten() - np.ones_like(np.random.rand(1, input_size).flatten())
+        np.random.seed(p+100)
+        random_coord_y = 2*np.random.rand(1, input_size).flatten() - np.ones_like(np.random.rand(1, input_size).flatten())
+        coords = SkyCoord(ra=coord_catalog['RA'].values + 0.5*(self.ndeg-0.2)*random_coord_x,
+                          dec=coord_catalog['DEC'].values + 0.5*(self.ndeg-0.2)*random_coord_y, unit='deg') 
+
+        #------------------------------------------------------------------#
+        # # # # # Check for potential neighbours # # # # #
+        #------------------------------------------------------------------#
+
+        false_coords = SkyCoord(ra=false_catalog['RA'].values, dec=false_catalog['DEC'].values, unit='deg')
+        cluster_density = []
+        false_cluster_density = []
+        coord_neighbours = []
+        false_coord_neighbours = []
+        for i in range(input_size):
+            ## Match between galaxy clusters and themselves 
+            idx, _, _ = match_coordinates_sky(coords_ns, coords_ns, nthneighbor=2)
+            ra_diff = np.abs(coord_catalog['RA'].values[i] - coord_catalog['RA'].values[idx[i]])
+            dec_diff = np.abs(coord_catalog['DEC'].values[i] - coord_catalog['DEC'].values[idx[i]])            
+            k = 3
+            neighb = [[coord_catalog['RA'].values[idx[i]], coord_catalog['DEC'].values[idx[i]]]]
+            while ra_diff < 1.5*self.ndeg and dec_diff < 1.5*self.ndeg:
+                idx, _, _ = match_coordinates_sky(coords_ns, coords_ns, nthneighbor=k)
+                ra_diff = np.abs(coord_catalog['RA'].values[i] - coord_catalog['RA'].values[idx[i]])
+                dec_diff = np.abs(coord_catalog['DEC'].values[i] - coord_catalog['DEC'].values[idx[i]])
+                neighb.append([coord_catalog['RA'].values[idx[i]], coord_catalog['DEC'].values[idx[i]]])
+                k += 1
+            coord_neighbours.append(neighb)
+            cluster_density.append(k-2)
+
+            ## Match between galaxy clusters and false clusters
+            idx, _, _ = match_coordinates_sky(coords_ns, false_coords, nthneighbor=1)
+            ra_diff = np.abs(coord_catalog['RA'].values[i] - false_catalog['RA'].values[idx[i]])
+            dec_diff = np.abs(coord_catalog['DEC'].values[i] - false_catalog['DEC'].values[idx[i]])            
+            k = 2
+            neighb = [[false_catalog['RA'].values[idx[i]], false_catalog['DEC'].values[idx[i]]]]
+            while ra_diff < 1.5*self.ndeg and dec_diff < 1.5*self.ndeg:
+                idx, _, _ = match_coordinates_sky(coords_ns, false_coords, nthneighbor=k)
+                ra_diff = np.abs(coord_catalog['RA'].values[i] - false_catalog['RA'].values[idx[i]])
+                dec_diff = np.abs(coord_catalog['DEC'].values[i] - false_catalog['DEC'].values[idx[i]])
+                neighb.append([false_catalog['RA'].values[idx[i]], false_catalog['DEC'].values[idx[i]]])
+                k += 1
+            false_coord_neighbours.append(neighb)
+            false_cluster_density.append(k-2)
+
+
+        if plot == True:
+            fig = plt.figure(figsize=(7,7), tight_layout=False)
+            ax = fig.add_subplot(111)
+            ax.set_facecolor('white')
+            ax.grid(True, color='grey', lw=0.5)
+            ax.set_xlabel('Neighbours per patch', fontsize=20)
+            ax.set_ylabel('Cluster number', fontsize=20)
+            ax.hist(cluster_density)
+            ax.set_yscale('log')
+
+            plt.savefig(self.output_path + 'figures/' + 'cluster_density' + '.png', bbox_inches='tight', transparent=False)
+            plt.show()
+            plt.close()
+
+            fig = plt.figure(figsize=(7,7), tight_layout=False)
+            ax = fig.add_subplot(111)
+            ax.set_facecolor('white')
+            ax.grid(True, color='grey', lw=0.5)
+            ax.set_xlabel('Neighbours per patch', fontsize=20)
+            ax.set_ylabel('False cluster number', fontsize=20)
+            ax.hist(false_cluster_density, bins=14)
+            ax.set_yscale('log')
+
+            plt.savefig(self.output_path + 'figures/' + 'false_cluster_density' + '.png', bbox_inches='tight', transparent=False)
+            plt.show()
+            plt.close()
+
+        #------------------------------------------------------------------#
+        # # # # # Create patch & masks # # # # #
+        #------------------------------------------------------------------#
+
+        maps = self.maps
+        cutsky = CutSky(maps, npix=self.npix, pixsize=self.pixsize, low_mem=False)
+        cutsky_rot = CutSky(maps, npix=int(np.sqrt(2)*self.npix), pixsize=self.pixsize, low_mem=False)
+
+        labels = np.ndarray((input_size,self.npix,self.npix,2))
+        inputs = np.ndarray((input_size,self.npix,self.npix,len(self.bands)))
+        milca = np.ndarray((input_size,self.npix,self.npix,1))
+        dataset_type = []
+        
+        for i, coord in enumerate(coords):
+            # if hp.ang2pix(self.nside, coord.galactic.l.degree, coord.galactic.b.degree, lonlat=True) == 6 or hp.ang2pix(self.nside, coord.galactic.l.degree, coord.galactic.b.degree, lonlat=True) == 7:
+            if coord.galactic.b.degree > -40 and coord.galactic.b.degree < -20 and coord.galactic.l.degree > 200 and coord.galactic.l.degree < 300:
+                dataset_type.append('test')
+                labels[i,:,:,0] = np.zeros((self.npix, self.npix))
+                labels[i,:,:,1] = np.zeros((self.npix, self.npix))
+                milca[i,:,:,0] = np.zeros((self.npix, self.npix))
+                for j in range(len(self.bands)):
+                    inputs[i,:,:,j] = np.zeros((self.npix, self.npix))
+                continue
+            # elif hp.ang2pix(self.nside, coord.galactic.l.degree, coord.galactic.b.degree, lonlat=True) == 9 or hp.ang2pix(self.nside, coord.galactic.l.degree, coord.galactic.b.degree, lonlat=True) == 38 or hp.ang2pix(self.nside, coord.galactic.l.degree, coord.galactic.b.degree, lonlat=True) == 41 or hp.ang2pix(self.nside, coord.galactic.l.degree, coord.galactic.b.degree, lonlat=True) == 25:
+            elif coord.galactic.b.degree > -60 and coord.galactic.b.degree < -40:
+                dataset_type.append('val')
+            elif coord.galactic.b.degree > -62 and coord.galactic.b.degree < -60:
+                dataset_type.append('skip')
+                labels[i,:,:,0] = np.zeros((self.npix, self.npix))
+                labels[i,:,:,1] = np.zeros((self.npix, self.npix))
+                milca[i,:,:,0] = np.zeros((self.npix, self.npix))
+                for j in range(len(self.bands)):
+                    inputs[i,:,:,j] = np.zeros((self.npix, self.npix))
+                continue
+            else:
+                dataset_type.append('train')
+
+            np.random.seed(p+i+200)
+            random_angle = 360*float(np.random.rand(1))
+
+            patch = cutsky.cut_fits(coord)
+            HDU = patch[-1]['fits']
+            wcs = WCS(HDU.header)
+            x,y = wcs.world_to_pixel_values(coord_catalog['RA'].values[i], coord_catalog['DEC'].values[i])
+            patch_rot = cutsky_rot.cut_fits(coord)
+            HDU_rot = patch_rot[-1]['fits']
+            HDU_rot_data = ndimage.rotate(np.array(HDU_rot.data), random_angle, reshape=False)
+
+            HDU_rot_data = ndimage.rotate(np.array(HDU_rot.data), random_angle, reshape=False)
+            wcs_rot = WCS(HDU_rot.header)
+            x_rot,y_rot = wcs_rot.world_to_pixel_values(coord_catalog['RA'].values[i], coord_catalog['DEC'].values[i])
+            x_rot, y_rot = self.rotate(origin=(0.5*self.npix*np.sqrt(2), 0.5*self.npix*np.sqrt(2)), point=(x_rot,y_rot), angle=random_angle)
+            x_rot, y_rot = x_rot-int(0.5*self.npix*(np.sqrt(2)-1)), y_rot-int(0.5*self.npix*(np.sqrt(2)-1))
+
+            if x_rot < 0 or x_rot > self.npix or y_rot < 0 or y_rot > self.npix:
+                np.random.seed(p+i+200)
+                random_int = np.random.randint(300,400)
+                random_index = 0
+                while x_rot < 0 or x_rot > self.npix or y_rot < 0 or y_rot > self.npix:
+                    np.random.seed(random_int+random_index)
+                    random_angle = 360*float(np.random.rand(1))
+
+                    HDU_rot_data = ndimage.rotate(np.array(HDU_rot.data), random_angle, reshape=False)
+                    wcs_rot = WCS(HDU_rot.header)
+                    x_rot,y_rot = wcs_rot.world_to_pixel_values(coord_catalog['RA'].values[i], coord_catalog['DEC'].values[i])
+                    x_rot, y_rot = self.rotate(origin=(0.5*self.npix*np.sqrt(2), 0.5*self.npix*np.sqrt(2)), point=(x_rot,y_rot), angle=random_angle)
+                    x_rot, y_rot = x_rot-int(0.5*self.npix*(np.sqrt(2)-1)), y_rot-int(0.5*self.npix*(np.sqrt(2)-1))
+                    random_index += 1
+
+            h, w = self.npix, self.npix
+
+            if plot == True:
+                center = [(x,y)]
+                ang_center = [(coord_catalog['RA'].values[i], coord_catalog['DEC'].values[i])]
+                if cluster_density[i] == 1:
+                    mask, _, _, _ = self.create_circular_mask(h, w, center=center, ang_center= ang_center, radius=self.disk_radius)
+                else:
+                    for j in range(cluster_density[i]-1):
+                        center.append(wcs.world_to_pixel_values(coord_neighbours[i][j][0], coord_neighbours[i][j][1]))
+                        ang_center.append((coord_neighbours[i][j][0], coord_neighbours[i][j][1]))
+                    mask, _, _, _ = self.create_circular_mask(h, w, center=center, ang_center= ang_center, radius=self.disk_radius)
+
+            ## CLUSTERS
+            center = [(x_rot,y_rot)]
+            ang_center = [(coord_catalog['RA'].values[i], coord_catalog['DEC'].values[i])]
+            if cluster_density[i] == 1:
+                mask_rot, _, _, _ = self.create_circular_mask(h, w, center=center, ang_center= ang_center, radius=self.disk_radius)
+                labels[i,:,:,0] = mask_rot.astype(int)
+            else:
+                for j in range(cluster_density[i]-1):
+                    x_rotn, y_rotn = wcs_rot.world_to_pixel_values(coord_neighbours[i][j][0], coord_neighbours[i][j][1])
+                    x_rotn, y_rotn = self.rotate(origin=(0.5*self.npix*np.sqrt(2), 0.5*self.npix*np.sqrt(2)), point=(x_rotn,y_rotn), angle=random_angle)
+                    x_rotn, y_rotn = x_rotn-int(0.5*self.npix*(np.sqrt(2)-1)), y_rotn-int(0.5*self.npix*(np.sqrt(2)-1))
+                    center.append((x_rotn, y_rotn))
+                    ang_center.append((coord_neighbours[i][j][0], coord_neighbours[i][j][1]))
+                mask_rot, _, _, _ = self.create_circular_mask(h, w, center=center, ang_center= ang_center, radius=self.disk_radius)
+                labels[i,:,:,0] = mask_rot.astype(int)
+
+            ## FALSE CLUSTERS
+            center = []
+            ang_center = []
+            if false_cluster_density[i] == 0:
+                mask_rot_false = np.zeros((self.npix, self.npix))
+                labels[i,:,:,1] = mask_rot_false
+            else:
+                for j in range(false_cluster_density[i]):
+                    x_rotn, y_rotn = wcs_rot.world_to_pixel_values(false_coord_neighbours[i][j][0], false_coord_neighbours[i][j][1])
+                    x_rotn, y_rotn = self.rotate(origin=(0.5*self.npix*np.sqrt(2), 0.5*self.npix*np.sqrt(2)), point=(x_rotn,y_rotn), angle=random_angle)
+                    x_rotn, y_rotn = x_rotn-int(0.5*self.npix*(np.sqrt(2)-1)), y_rotn-int(0.5*self.npix*(np.sqrt(2)-1))
+                    center.append((x_rotn, y_rotn))
+                    ang_center.append((false_coord_neighbours[i][j][0], false_coord_neighbours[i][j][1]))
+                mask_rot_false, _, _, _ = self.create_circular_mask(h, w, center=center, ang_center= ang_center, radius=self.disk_radius)
+                labels[i,:,:,1] = mask_rot_false.astype(int)
+
+                if verbose:
+                    print('\n')
+                    print(i)
+                    print('cluster density: %s'%cluster_density[i])
+                    print('coords no shift: {:.2f}, {:.2f}'.format(coord_catalog['RA'].values[i], coord_catalog['DEC'].values[i]))
+                    print('coords shift: {:.2f}, {:.2f}'.format(coord_catalog['RA'].values[i] -30*self.pixsize/60 + (60*self.pixsize/60)*random_coord_x[i], coord_catalog['DEC'].values[i] -30*self.pixsize/60 + (60*self.pixsize/60)*random_coord_y[i]))
+                    print(coord_neighbours[i])
+                    print(center)
+                    print('\n')
+            
+            n_rot  = int(0.5*self.npix*(np.sqrt(2)-1))
+            milca[i,:,:,0] = HDU_rot_data[n_rot:-n_rot, n_rot:-n_rot]
+            for j in range(len(self.bands)):
+                # inputs[i,:,:,j] = patch[j]['fits'].data
+                inputs[i,:,:,j] = self.rotate_patch(p, i, j, patch_rot, coord_catalog, random_angle, n_rot)
+
+            #------------------------------------------------------------------#
+            # # # # # Plots # # # # #
+            #------------------------------------------------------------------#
+
+            if plot == True:
+                fig = plt.figure(figsize=(25,5), tight_layout=False)
+
+                ax = fig.add_subplot(151)
+                im = ax.imshow(HDU.data, origin='lower')
+                ax.scatter(x,y)
+                ax.set_title('x={:.2f}, y={:.2f}'.format(x,y))
+
+                ax = fig.add_subplot(152)
+                im = ax.imshow(mask, origin='lower')
+                ax.set_title('x={:.2f}, y={:.2f}'.format(x,y))
+
+                ax = fig.add_subplot(153)
+                im = ax.imshow(milca[i,:,:,0], origin='lower') #[n_rot:-n_rot, n_rot:-n_rot]
+                ax.scatter(x_rot,y_rot)
+                ax.set_title('xrot={:.2f}, yrot={:.2f}'.format(x_rot,y_rot))
+
+                ax = fig.add_subplot(154)
+                im = ax.imshow(labels[i,:,:,0], origin='lower')
+                ax.set_title('Potential clusters: {:.0f}'.format(cluster_density[i]))
+
+                ax = fig.add_subplot(155)
+                im = ax.imshow(labels[i,:,:,1], origin='lower')
+                ax.set_title('Potential sources: {:.0f}'.format(false_cluster_density[i]))
+
+                GenerateFiles.make_directory(self, path_to_file = self.temp_path + 'training_set/')
+                plt.savefig(self.temp_path + 'training_set/training_%s'%i + '.png', bbox_inches='tight', transparent=False)
+                plt.show()
+                plt.close()
+
+        #------------------------------------------------------------------#
+        # # # # # Save files # # # # #
+        #------------------------------------------------------------------#
+
+        assert len(coords) == len(dataset_type)
+
+        if plot == True:
+            counts = Counter(dataset_type)
+            df = pd.DataFrame.from_dict(counts, orient='index')
+            ax = df.plot(kind='bar')
+            ax.figure.savefig(self.output_path + 'figures/' + 'dataset_type_density' + '.png', bbox_inches='tight', transparent=False)
+
+        GenerateFiles.make_directory(self, path_to_file = self.output_path + 'files/' + 'f%s_d%s'%(self.freq, self.disk_radius))
+        np.savez_compressed(self.output_path + 'files/f%s_d%s/'%(self.freq, self.disk_radius) + 'milca_n%s_f%s_'%(p, self.freq) + self.dataset, milca)
+        np.savez_compressed(self.output_path + 'files/f%s_d%s/'%(self.freq, self.disk_radius) + 'type_n%s_f%s_'%(p, self.freq) + self.dataset, np.array(dataset_type))
+        if p == 0:
+            np.savez_compressed(self.dataset_path + 'type_test_f%s_'%(self.freq) + self.dataset, np.array(dataset_type))
+        np.savez_compressed(self.output_path + 'files/f%s_d%s/'%(self.freq, self.disk_radius) + 'input_n%s_f%s_'%(p, self.freq) + self.dataset, inputs)
+        np.savez_compressed(self.output_path + 'files/f%s_d%s/'%(self.freq, self.disk_radius) + 'label_n%s_f%s_'%(p, self.freq) + self.dataset, labels)
+
+
+    def test_coords(self, x_left, x_right, y_up, y_down):
+
+        width = np.abs(x_right - x_left)
+        width_contour = width%self.ndeg
+        n_width = width//self.ndeg
+
+        height = np.abs(y_up - y_down)
+        height_contour = height%self.ndeg
+        n_height = height//self.ndeg
+
+        l, b = [], []
+        x = x_left + 0.5*width_contour + 0.5*self.ndeg
+        y = y_down + 0.5*height_contour + 0.5*self.ndeg
+        l.append(x)
+        b.append(y)
+        for i in range(int(n_height)):
+            if i > 0:
+                x = x_left + 0.5*width_contour + 0.5*self.ndeg
+                y += self.ndeg
+            for j in range(int(n_width)):
+                x += self.ndeg
+                if i > 0 or j > 0:
+                    l.append(x)
+                    b.append(y)
+
+        print(self.ndeg, n_height, n_width, n_height * n_width, len(l))
+        assert int(n_height * n_width) == len(l)
+
+        coords = SkyCoord(l, b, unit='deg', frame='galactic') 
+        catalog = pd.DataFrame(data={'GLON': l, 'GLAT': b})
+
+        # print(catalog.head(60))
+
+        return coords, catalog
+
+    def test_data_generator(self, plot=False, verbose=False):
+        coord_catalog, false_catalog = self.return_coord_catalog()
+
+        false_catalog.query("GLAT > -40", inplace=True)
+        false_catalog.query("GLAT < -20", inplace=True)
+        false_catalog.query("GLON > 200", inplace=True)
+        false_catalog.query("GLON < 300", inplace=True)
+        # print(len(false_catalog))
+        # print(false_catalog.head(10))
+        # return
+
+
+        test_coords, test_catalog = self.test_coords(x_left=200, x_right=300, y_up=-18, y_down=-40)
+        input_size = len(test_coords)
+        maps = self.maps
+        cutsky = CutSky(maps, npix=self.npix, pixsize=self.pixsize, low_mem=False)
+
+        labels = np.ndarray((len(test_coords),self.npix,self.npix,2))
+        inputs = np.ndarray((len(test_coords),self.npix,self.npix,len(self.bands)))
+        milca = np.ndarray((len(test_coords),self.npix,self.npix,1))
+
+        coords_ns = SkyCoord(coord_catalog['GLON'].values, coord_catalog['GLAT'].values, unit='deg', frame='galactic')
+        false_coords = SkyCoord(false_catalog['GLON'].values, false_catalog['GLAT'].values, unit='deg', frame='galactic')
+        cluster_density = []
+        false_cluster_density = []
+        coord_neighbours = []
+        false_coord_neighbours = []
+        for i in range(input_size):
+            ## Match between test patch center and galaxy clusters
+            idx, _, _ = match_coordinates_sky(test_coords, coords_ns, nthneighbor=1)
+            l_diff = np.abs(test_catalog['GLON'].values[i] - coord_catalog['GLON'].values[idx[i]])
+            b_diff = np.abs(test_catalog['GLAT'].values[i] - coord_catalog['GLAT'].values[idx[i]])            
+            k = 2
+            neighb = [[coord_catalog['GLON'].values[idx[i]], coord_catalog['GLAT'].values[idx[i]]]]
+            while l_diff <= 0.5*self.ndeg and b_diff <= 0.5*self.ndeg:
+                idx, _, _ = match_coordinates_sky(test_coords, coords_ns, nthneighbor=k)
+                l_diff = np.abs(test_catalog['GLON'].values[i] - coord_catalog['GLON'].values[idx[i]])
+                b_diff = np.abs(test_catalog['GLAT'].values[i] - coord_catalog['GLAT'].values[idx[i]])
+                neighb.append([coord_catalog['GLON'].values[idx[i]], coord_catalog['GLAT'].values[idx[i]]])
+                k += 1
+            coord_neighbours.append(neighb)
+            cluster_density.append(k-2)
+
+            ## Match between test patch center and false clusters
+            idx, _, _ = match_coordinates_sky(test_coords, false_coords, nthneighbor=1)
+            l_diff = np.abs(test_catalog['GLON'].values[i] - false_catalog['GLON'].values[idx[i]])
+            b_diff = np.abs(test_catalog['GLAT'].values[i] - false_catalog['GLAT'].values[idx[i]])            
+            k = 2
+            neighb = [[false_catalog['GLON'].values[idx[i]], false_catalog['GLAT'].values[idx[i]]]]
+            while l_diff <= 0.5*self.ndeg and b_diff <= 0.5*self.ndeg:
+                idx, _, _ = match_coordinates_sky(coords_ns, false_coords, nthneighbor=k)
+                l_diff = np.abs(test_catalog['GLON'].values[i] - false_catalog['GLON'].values[idx[i]])
+                b_diff = np.abs(test_catalog['GLAT'].values[i] - false_catalog['GLAT'].values[idx[i]])
+                neighb.append([false_catalog['GLON'].values[idx[i]], false_catalog['GLAT'].values[idx[i]]])
+                k += 1
+            false_coord_neighbours.append(neighb)
+            false_cluster_density.append(k-2)
+
+
+        sum_cluster, sum_false = 0, 0
+        for i, coord in enumerate(test_coords):
+            patch = cutsky.cut_fits(coord)
+            HDU = patch[-1]['fits']
+            wcs = WCS(HDU.header)
+
+
+            center = []
+            ang_center = []
+            if cluster_density[i] == 0:
+                mask = np.zeros((self.npix, self.npix))
+                labels[i,:,:,0] = mask
+            else:
+                for j in range(cluster_density[i]):
+                    center.append(wcs.world_to_pixel_values(coord_neighbours[i][j][0], coord_neighbours[i][j][1]))
+                    ang_center.append((coord_neighbours[i][j][0], coord_neighbours[i][j][1]))
+                mask, _, _, _ = self.create_circular_mask(self.npix, self.npix, center=center, ang_center= ang_center, radius=self.disk_radius)
+                labels[i,:,:,0] = mask.astype(int)
+
+            center = []
+            ang_center = []
+            if false_cluster_density[i] == 0:
+                mask_false = np.zeros((self.npix, self.npix))
+                labels[i,:,:,1] = mask
+            else:
+                for j in range(false_cluster_density[i]):
+                    center.append(wcs.world_to_pixel_values(false_coord_neighbours[i][j][0], false_coord_neighbours[i][j][1]))
+                    ang_center.append((false_coord_neighbours[i][j][0], false_coord_neighbours[i][j][1]))
+                mask_false, _, _, _ = self.create_circular_mask(self.npix, self.npix, center=center, ang_center= ang_center, radius=self.disk_radius)
+                labels[i,:,:,1] = mask_false.astype(int)
+
+            milca[i,:,:,0] = patch[-1]['fits'].data
+            for j in range(len(self.bands)):
+                inputs[i,:,:,j] = patch[j]['fits'].data
+
+            if verbose:
+                print('\n')
+                print(i)
+                print('cluster density: %s'%cluster_density[i])
+                print('false cluster density: %s'%false_cluster_density[i])
+                print('test centers: {:.2f}, {:.2f}'.format(test_catalog['GLON'].values[i], test_catalog['GLAT'].values[i]))
+                print(false_coord_neighbours[i])
+                print(coord_neighbours[i])
+                print('\n')
+
+            if plot == True:
+                fig = plt.figure(figsize=(12,5), tight_layout=False)
+
+                ax = fig.add_subplot(131)
+                im = ax.imshow(HDU.data, origin='lower')
+                ax.set_title('%s: '%i + 'l={:.2f}, b={:.2f}'.format(test_catalog['GLON'].values[i], test_catalog['GLAT'].values[i]))
+
+                ax = fig.add_subplot(132)
+                im = ax.imshow(mask, origin='lower')
+                ax.set_title('potential clusters: %s'%cluster_density[i])
+
+                ax = fig.add_subplot(133)
+                im = ax.imshow(mask_false, origin='lower')
+                ax.set_title('potential sources: %s'%false_cluster_density[i])
+                
+                GenerateFiles.make_directory(self, path_to_file = self.temp_path + 'test_set/')
+                plt.savefig(self.temp_path + 'test_set/test_%s'%i + '.png', bbox_inches='tight', transparent=False)
+                plt.show()
+                plt.close()
+
+            sum_cluster += cluster_density[i]
+            sum_false += false_cluster_density[i]
+
+        print(sum_cluster, sum_false)
+
+        np.savez_compressed(self.output_path + 'files/f%s_d%s/'%(self.freq, self.disk_radius) + 'milca_test_f%s_'%(self.freq) + self.dataset, milca)
+        np.savez_compressed(self.output_path + 'files/f%s_d%s/'%(self.freq, self.disk_radius) + 'input_test_f%s_'%(self.freq) + self.dataset, inputs)
+        np.savez_compressed(self.output_path + 'files/f%s_d%s/'%(self.freq, self.disk_radius) + 'label_test_f%s_'%(self.freq) + self.dataset, labels)
+
+
+
+          
 
     def create_input(self, p, plot=False, verbose=False):
         """Creates input/output datasets for all clusters in the selected cluster catalog. Patches contain at least 
@@ -373,11 +1005,11 @@ class MakeData(object):
         random_coord_x = np.random.rand(1, input_size).flatten()
         np.random.seed(p)
         random_coord_y = np.random.rand(1, input_size).flatten()
-        coords = SkyCoord(ra=coord_catalog['RA'].values -30*1.7/60 + (60*1.7/60)*random_coord_x,
-                          dec=coord_catalog['DEC'].values -30*1.7/60 + (60*1.7/60)*random_coord_y, unit='deg')
+        coords = SkyCoord(ra=coord_catalog['RA'].values -30*self.pixsize/60 + (60*self.pixsize/60)*random_coord_x,
+                          dec=coord_catalog['DEC'].values -30*self.pixsize/60 + (60*self.pixsize/60)*random_coord_y, unit='deg')
 
         if p == 0:
-            test_positions = np.array([coord_catalog['RA'].values -30*1.7/60 + (60*1.7/60)*random_coord_x, coord_catalog['DEC'].values -30*1.7/60 + (60*1.7/60)*random_coord_y])
+            test_positions = np.array([coord_catalog['RA'].values -30*self.pixsize/60 + (60*self.pixsize/60)*random_coord_x, coord_catalog['DEC'].values -30*self.pixsize/60 + (60*1.7/60)*random_coord_y])
             np.save(self.dataset_path + 'test_coordinates_f%s_'%(self.freq) + self.dataset, test_positions)
 
         #------------------------------------------------------------------#
@@ -421,7 +1053,6 @@ class MakeData(object):
         #------------------------------------------------------------------#
 
         maps = self.maps
-
         cutsky = CutSky(maps, npix=self.npix, pixsize=self.pixsize, low_mem=False)
 
         labels = np.ndarray((input_size,self.npix,self.npix,1))
@@ -459,7 +1090,7 @@ class MakeData(object):
                     print(i)
                     print('cluster density: %s'%cluster_density[i])
                     print('coords no shift: {:.2f}, {:.2f}'.format(coord_catalog['RA'].values[i], coord_catalog['DEC'].values[i]))
-                    print('coords shift: {:.2f}, {:.2f}'.format(coord_catalog['RA'].values[i] -30*1.7/60 + (60*1.7/60)*random_coord_x[i], coord_catalog['DEC'].values[i] -30*1.7/60 + (60*1.7/60)*random_coord_y[i]))
+                    print('coords shift: {:.2f}, {:.2f}'.format(coord_catalog['RA'].values[i] -30*self.pixsize/60 + (60*self.pixsize/60)*random_coord_x[i], coord_catalog['DEC'].values[i] -30*self.pixsize/60 + (60*self.pixsize/60)*random_coord_y[i]))
                     print(coord_neighbours[i])
                     print(center)
                     print('\n')
@@ -467,6 +1098,42 @@ class MakeData(object):
             milca[i,:,:,0] = patch[-1]['fits'].data
             for j in range(len(self.bands)):
                 inputs[i,:,:,j] = patch[j]['fits'].data
+
+                #------------------------------------------------------------------#
+                # # # # # Plots # # # # #
+                #------------------------------------------------------------------#
+
+                if plot == True:
+                    fig = plt.figure(figsize=(20,5), tight_layout=False)
+                    ax = fig.add_subplot(131)
+                    divider = make_axes_locatable(ax)
+                    cax = divider.append_axes('right', size='5%', pad=0.05)
+                    im = ax.imshow(HDU.data, origin='lower')
+                    ax.scatter(x,y)
+                    ax.set_title('x={:.2f}, y={:.2f}'.format(x,y))
+                    fig.colorbar(im, cax=cax, orientation='vertical')
+
+                    ax = fig.add_subplot(132)
+                    divider = make_axes_locatable(ax)
+                    cax = divider.append_axes('right', size='5%', pad=0.05)
+                    im = ax.imshow(mask, origin='lower')
+                    ax.set_title('x={:.2f}, y={:.2f}'.format(x,y))
+                    fig.colorbar(im, cax=cax, orientation='vertical')
+
+                    ax = fig.add_subplot(133)
+                    divider = make_axes_locatable(ax)
+                    cax = divider.append_axes('right', size='5%', pad=0.05)
+                    patch_ns = cutsky.cut_fits(coords_ns[i])
+                    HDU_ns = patch_ns[6]['fits']
+                    im = ax.imshow(HDU_ns.data, origin='lower')
+                    ax.scatter(32,32)
+                    ax.set_title('x={:.0f}, y={:.0f}'.format(32,32))
+                    fig.colorbar(im, cax=cax, orientation='vertical')
+
+                    plt.savefig(self.temp_path + 'random_mask_milca-y_%s'%i + '.png', bbox_inches='tight', transparent=False)
+                    plt.show()
+                    plt.close()
+
 
         #------------------------------------------------------------------#
         # # # # # Save files # # # # #
