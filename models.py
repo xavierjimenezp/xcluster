@@ -28,8 +28,8 @@ from sklearn.model_selection import train_test_split
 K.set_image_data_format('channels_last')  # TF dimension ordering in this code
 kinit = 'glorot_normal'
 
-def unet(opt,input_size, lossfxn):   
-  
+def unet(opt, input_size, lossfxn, n_labels):   
+
     inputs = Input(shape=input_size)
     conv1 = UnetConv2D(inputs, 32, is_batchnorm=True, name='conv1')
     pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
@@ -62,12 +62,14 @@ def unet(opt,input_size, lossfxn):
     up9 = concatenate([Conv2DTranspose(32, (2, 2), strides=(2, 2), kernel_initializer=kinit, padding='same')(conv8), conv1], axis=3)
     conv9 = Conv2D(32, (3, 3), activation='relu',  kernel_initializer=kinit, padding='same')(up9)
     conv9 = Conv2D(32, (3, 3), activation='relu', kernel_initializer=kinit, padding='same')(conv9)
-    conv10 = Conv2D(1, (1, 1), activation='sigmoid', name='final')(conv9)
+    conv10 = Conv2D(n_labels, (1, 1), activation='sigmoid', name='final')(conv9)
+    # conv10 = Conv2D(1, (1, 1), activation='sigmoid', name='final')(conv9)
 
     model = Model(inputs=[inputs], outputs=[conv10])
-    metrics = [losses.dsc, tf.keras.metrics.Recall(), tf.keras.metrics.Precision(), losses.iou]
+    metrics = [losses.dsc, tf.keras.metrics.Recall(), tf.keras.metrics.Precision()]
     model.compile(optimizer=opt, loss=lossfxn, metrics=metrics)
     return model
+
 
 def expend_as(tensor, rep,name):
 	my_repeat = Lambda(lambda x, repnum: K.repeat_elements(x, repnum, axis=3), arguments={'repnum': rep},  name='psi_up'+name)(tensor)

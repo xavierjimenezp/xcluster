@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Part of these functions are implemented in https://github.com/mlyg/mixed-focal-loss/
-"""
 
 from tensorflow.keras.losses import binary_crossentropy
 import tensorflow.keras.backend as K
 import tensorflow as tf
 import numpy as np
+from sklearn.metrics import precision_score, recall_score
+from tensorflow.python.types.core import Value
 
 epsilon = 1e-5
 smooth = 1
@@ -29,12 +28,124 @@ def f1(y_true, y_pred):
     return tf.numpy_function(f, [y_true, y_pred], tf.float32)
 
 def dsc(y_true, y_pred):
-    smooth = 1.
-    y_true_f = K.flatten(y_true)
-    y_pred_f = K.flatten(y_pred)
-    intersection = K.sum(y_true_f * y_pred_f)
-    score = (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
+    smooth = 0.00001
+    tp = K.sum(y_true * y_pred)
+    fn = K.sum(y_true * (1-y_pred))
+    fp = K.sum((1-y_true) * y_pred)
+    # Calculate Dice score
+    score = (tp + smooth)/(tp + 0.5*fp + 0.5*fn+ smooth)
     return score
+
+def precision(y_true, y_pred):
+    smooth = 0.00001
+    tp = K.sum(y_true * y_pred)
+    fn = K.sum(y_true * (1-y_pred))
+    fp = K.sum((1-y_true) * y_pred)
+    # Calculate Dice score
+    score = (tp + smooth)/(tp + fp + smooth)
+    return score
+
+def recall(y_true, y_pred):
+    smooth = 0.00001
+    tp = K.sum(y_true * y_pred)
+    fn = K.sum(y_true * (1-y_pred))
+    fp = K.sum((1-y_true) * y_pred)
+    # Calculate Dice score
+    score = (tp + smooth)/(tp + fn + smooth)
+    return score
+
+def modified_tversky_loss(y_true, y_pred):
+    """
+    Paper: Tversky loss function for image segmentation using 3D fully convolutional deep networks
+    Link: https://arxiv.org/abs/1706.05721
+    delta: controls weight given to false positive and false negatives. 
+    this equates to the Tversky index when delta = 0.7
+    smooth: smoothing constant to prevent division by zero errors
+    """
+    delta = 0.5
+    smooth = 0.00001
+    size = 1
+
+    axis = identify_axis(y_true.get_shape())
+
+    # Calculate force true negatives (tn)  
+    tn_list = []
+    for batch in range(y_true.get_shape()[0]):
+        for cl in range(y_pred.get_shape()[3]):
+            if cl == 0:
+                max_val = tf.reduce_max(y_true[batch,:,:,cl], axis=[0,1], keepdims=True)
+                if max_val != 1:
+                    tn_list.append(0.)
+                    continue
+                equal_one = tf.equal(y_true[batch,:,:,cl], max_val)
+                one_coords = tf.where(equal_one)
+                c_last = one_coords[0]
+                c_max = one_coords[0]
+                c_max_list = []
+                c_min_list = [c_last] 
+
+                for c in one_coords:
+                    diff = c - c_last
+                    dx = diff[0]
+                    dy = diff[1]
+                    if dx < 0:
+                        dx = -dx
+                    if dy < 0:
+                        dy = -dy
+
+                    if dx <= 3 and dy <= 3:
+                        c_max = c
+                        continue
+                    else:
+                        c_max_list.append(c_max)
+                        c_min_list.append(c)
+                        c_last = c
+                c_max_list.append(c_max)
+
+                assert len(c_max_list) == len(c_min_list)
+
+                tn = []
+                for i in range(len(c_min_list)):
+                    x_min, y_min = int(c_min_list[i][0]), int(c_min_list[i][1])
+                    x_max, y_max = int(c_max_list[i][0])+1, int(c_max_list[i][1])+1
+                    # print(x_min)
+                    # print(x_max)
+                    # print(y_min)
+                    # print(y_max)
+                    # print(y_true[batch, x_min-size:x_max+size, y_min-size:y_max+size, cl])
+                    # print(y_pred[batch, x_min-size:x_max+size, y_min-size:y_max+size, cl])
+                    # print(K.sum((1 - y_true[batch, x_min-size:x_max+size, y_min-size:y_max+size, cl]) * y_pred[batch, x_min-size:x_max+size, y_min-size:y_max+size, cl]))
+                    tn.append(K.sum((1 - y_true[batch, x_min-size:x_max+size, y_min-size:y_max+size, cl]) * y_pred[batch, x_min-size:x_max+size, y_min-size:y_max+size, cl]))
+                tn_list.append(K.sum(tn))
+            else:
+                tn_list.append(0.)
+    
+    tn = tf.reshape(tn_list, (y_true.get_shape()[0],y_true.get_shape()[3]))
+    # print(tn)
+
+    # Calculate true positives (tp), false negatives (fn) and false positives (fp)
+    tp = K.sum(y_true * y_pred, axis=axis)
+    fn = K.sum(y_true * (1-y_pred), axis=axis)
+    try:
+        fp = K.sum((1-y_true) * y_pred, axis=axis) - tn
+    except:
+        fp = K.sum((1-y_true) * y_pred, axis=axis)
+        print(tn)
+        print(fp)
+        return
+    # print(fp)
+    # fp = fp - tn
+    # print(fp)
+    # return
+
+    tversky_class = (tp + smooth)/(tp + delta*fn + (1-delta)*fp + smooth)
+    # Sum up classes to one score
+    tversky_loss = K.sum(1-tversky_class, axis=[-1])
+    # adjusts loss to account for number of classes
+    num_classes = K.cast(K.shape(y_true)[-1],'float32')
+    tversky_loss = tversky_loss / num_classes
+
+    return tversky_loss
 
 # def dice_loss(y_true, y_pred):
 #     loss = 1 - dsc(y_true, y_pred)
@@ -128,31 +239,31 @@ def dice_loss(y_true, y_pred):
 
     return dice_loss
 
-
 # Tversky loss    
-def tversky_loss(y_true, y_pred):
-    """
-    Paper: Tversky loss function for image segmentation using 3D fully convolutional deep networks
-    Link: https://arxiv.org/abs/1706.05721
-    delta: controls weight given to false positive and false negatives. 
-    this equates to the Tversky index when delta = 0.7
-    smooth: smoothing constant to prevent division by zero errors
-    """
-    delta = 0.9
-    smooth = 1
-    axis = identify_axis(y_true.get_shape())
-    # Calculate true positives (tp), false negatives (fn) and false positives (fp)   
-    tp = K.sum(y_true * y_pred, axis=axis)
-    fn = K.sum(y_true * (1-y_pred), axis=axis)
-    fp = K.sum((1-y_true) * y_pred, axis=axis)
-    tversky_class = (tp + smooth)/(tp + delta*fn + (1-delta)*fp + smooth)
-    # Sum up classes to one score
-    tversky_loss = K.sum(1-tversky_class, axis=[-1])
-    # adjusts loss to account for number of classes
-    num_classes = K.cast(K.shape(y_true)[-1],'float32')
-    tversky_loss = tversky_loss / num_classes
+def tversky_loss(delta):
+    def loss_function(y_true, y_pred):
+        """
+        Paper: Tversky loss function for image segmentation using 3D fully convolutional deep networks
+        Link: https://arxiv.org/abs/1706.05721
+        delta: controls weight given to false positive and false negatives. 
+        this equates to the Tversky index when delta = 0.7
+        smooth: smoothing constant to prevent division by zero errors
+        """
+        smooth = 0.00001
+        axis = identify_axis(y_true.get_shape())
+        # Calculate true positives (tp), false negatives (fn) and false positives (fp)   
+        tp = K.sum(y_true * y_pred, axis=axis)
+        fn = K.sum(y_true * (1-y_pred), axis=axis)
+        fp = K.sum((1-y_true) * y_pred, axis=axis)
+        tversky_class = (tp + smooth)/(tp + delta*fn + (1-delta)*fp + smooth)
+        # Sum up classes to one score
+        tversky_loss = K.sum(1-tversky_class, axis=[-1])
+        # adjusts loss to account for number of classes
+        num_classes = K.cast(K.shape(y_true)[-1],'float32')
+        tversky_loss = tversky_loss / num_classes
 
-    return tversky_loss
+        return tversky_loss
+    return loss_function
 
 # Dice coefficient for use in Combo loss
 def dice_coefficient(y_true, y_pred):
@@ -207,40 +318,9 @@ def combo_loss(alpha=0.5,beta=0.5):
         
     return loss_function
 
-# Cosine Tversky loss
-def cosine_tversky_loss(gamma=1):
-    def loss_function(y_true, y_pred):
-        """
-        :param gamma: focal parameter controls degree of down-weighting of easy examples
-        delta: controls weight given to false positive and false negatives. 
-        this equates to the Tversky index when delta = 0.7
-        smooth: smoothing constant to prevent division by zero errors
-        """
-        delta = 0.7
-        smooth = 0.000001
-        axis = identify_axis(y_true.get_shape())
-        # Calculate true positives (tp), false negatives (fn), false positives (fp) and
-        # true negatives (tn)
-        tp = K.sum(y_true * y_pred, axis=axis)
-        fn = K.sum(y_true * (1-y_pred), axis=axis)
-        fp = K.sum((1-y_true) * y_pred, axis=axis)
-        tn = K.sum((1-y_true) * (1-y_pred), axis=axis)
-        tversky_class = (tp + smooth)/(tp + delta*fn + (1-delta)*fp + smooth)
-        # Clip Tversky values between 0 and 1 to prevent division by zero error
-        tversky_class= K.clip(tversky_class, 0., 1.)
-        # Calculate Cosine Tversky loss per class
-        cosine_tversky = (K.cos(tversky_class * np.pi))**gamma
-        # Sum across all classes
-        cosine_tversky_loss = K.sum(1-cosine_tversky,axis=[-1])
-        # adjusts loss to account for number of classes
-        num_classes = K.cast(K.shape(y_true)[-1],'float32')
-        cosine_tversky_loss = cosine_tversky_loss / num_classes
-        return cosine_tversky_loss
-
-    return loss_function
 
 # Focal Tversky loss
-def focal_tversky_loss(gamma=0.75):
+def focal_tversky_loss(delta=0.3, gamma=0.75):
     def loss_function(y_true, y_pred):
         """
         Paper: A Novel Focal Tversky loss function with improved Attention U-Net for lesion segmentation
@@ -251,7 +331,6 @@ def focal_tversky_loss(gamma=0.75):
         this equates to the Focal Tversky loss when delta = 0.7
         smooth: smooithing constant to prevent division by 0 errors
         """
-        delta=0.9
         smooth=0.000001
         # Clip values to prevent division by zero error
         epsilon = K.epsilon()
